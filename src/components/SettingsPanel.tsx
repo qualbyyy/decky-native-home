@@ -3,12 +3,72 @@ import { ButtonItem, DropdownItem, PanelSection, PanelSectionRow, ToggleField } 
 import { useMemo } from 'react';
 import { PLUGIN_NAME } from '../constants';
 import { cache } from '../data/cache';
-import { HomeLayout, MinimalSide, settings, useSettings } from '../data/settings';
+import { HomeLayout, MinimalSide, PluginLanguage, settings, useSettings } from '../data/settings';
 import { RECENT_ROW, ROW_SORTS, RowSort, rowSortLabel, sortByLabel, steamHomeCollections } from '../home/collections';
 import { RowStyle } from '../home/recentsLayout';
 
+const LABELS = {
+    en: {
+        home: 'Home',
+        language: 'Language',
+        enableHome: 'Enable Native Home',
+        homeMode: 'Home layout',
+        carousel: 'Cover carousel',
+        minimal: 'Minimalist list',
+        listSide: 'List side',
+        left: 'Left',
+        right: 'Right',
+        minimalDetails: 'Game panel (logo, Play, last played)',
+        carouselStyle: 'Carousel style',
+        gamesList: 'Games list',
+        recentGames: 'Recent games',
+        gamePage: 'Game Page',
+        enableGamePage: 'Built-in game page',
+        compactPage: 'Compact page layout',
+        hideCover: 'Hide cover on game page',
+        elements: 'Elements',
+        gameLogos: 'Game logos',
+        playtimeChip: 'Playtime next to Play',
+        hltbChip: 'HowLongToBeat next to Play',
+        hideTopBg: 'Hide top bar background',
+        hltb: 'HowLongToBeat',
+        autoPreload: 'Auto-preload HLTB',
+        clearCache: 'Clear HLTB cache',
+        cacheCleared: 'HLTB cache cleared',
+    },
+    ru: {
+        home: 'Главная',
+        language: 'Язык',
+        enableHome: 'Включить Native Home',
+        homeMode: 'Режим главной',
+        carousel: 'Карусель обложек',
+        minimal: 'Минималистичный список',
+        listSide: 'Сторона списка',
+        left: 'Слева',
+        right: 'Справа',
+        minimalDetails: 'Панель игры (лого, «Играть», запуск)',
+        carouselStyle: 'Стиль карусели',
+        gamesList: 'Список игр',
+        recentGames: 'Недавние игры',
+        gamePage: 'Страница игры',
+        enableGamePage: 'Встроенная страница игры',
+        compactPage: 'Компактный вид страницы',
+        hideCover: 'Скрывать обложку на странице игры',
+        elements: 'Элементы',
+        gameLogos: 'Логотипы игр',
+        playtimeChip: 'Время игры рядом с «Играть»',
+        hltbChip: 'HowLongToBeat рядом с «Играть»',
+        hideTopBg: 'Скрывать фон верхней панели',
+        hltb: 'HowLongToBeat',
+        autoPreload: 'Автозагрузка HLTB',
+        clearCache: 'Очистить кэш HLTB',
+        cacheCleared: 'Кэш HLTB очищен',
+    },
+} as const;
+
 export function SettingsPanel() {
     const {
+        language,
         enabled,
         cleanPage,
         spotlightHome,
@@ -25,26 +85,39 @@ export function SettingsPanel() {
         hideGameCover,
         autoPreload,
     } = useSettings();
+    const t = LABELS[language];
     const collections = useMemo(steamHomeCollections, []);
     const rowChosen = collections.some((c) => c.id === homeRow) ? homeRow : RECENT_ROW;
 
     return (
         <>
-            <PanelSection title="Главная">
+            <PanelSection title={t.home}>
+                <PanelSectionRow>
+                    <DropdownItem
+                        label={t.language}
+                        menuLabel={t.language}
+                        rgOptions={[
+                            { data: 'en', label: 'English' },
+                            { data: 'ru', label: 'Русский' },
+                        ]}
+                        selectedOption={language}
+                        onChange={(option) => settings.setLanguage(option.data as PluginLanguage)}
+                    />
+                </PanelSectionRow>
                 <PanelSectionRow>
                     <ToggleField
-                        label="Включить Native Home"
+                        label={t.enableHome}
                         checked={spotlightHome}
                         onChange={(value) => settings.setSpotlightHome(value)}
                     />
                 </PanelSectionRow>
                 <PanelSectionRow>
                     <DropdownItem
-                        label="Режим главной"
-                        menuLabel="Режим главной"
+                        label={t.homeMode}
+                        menuLabel={t.homeMode}
                         rgOptions={[
-                            { data: 'carousel', label: 'Карусель обложек' },
-                            { data: 'minimal', label: 'Минималистичный список' },
+                            { data: 'carousel', label: t.carousel },
+                            { data: 'minimal', label: t.minimal },
                         ]}
                         selectedOption={homeLayout}
                         onChange={(option) => settings.setHomeLayout(option.data as HomeLayout)}
@@ -54,11 +127,11 @@ export function SettingsPanel() {
                     <>
                         <PanelSectionRow>
                             <DropdownItem
-                                label="Сторона списка"
-                                menuLabel="Сторона списка"
+                                label={t.listSide}
+                                menuLabel={t.listSide}
                                 rgOptions={[
-                                    { data: 'left', label: 'Слева' },
-                                    { data: 'right', label: 'Справа' },
+                                    { data: 'left', label: t.left },
+                                    { data: 'right', label: t.right },
                                 ]}
                                 selectedOption={minimalSide}
                                 onChange={(option) => settings.setMinimalSide(option.data as MinimalSide)}
@@ -66,7 +139,7 @@ export function SettingsPanel() {
                         </PanelSectionRow>
                         <PanelSectionRow>
                             <ToggleField
-                                label="Панель игры (лого, «Играть», запуск)"
+                                label={t.minimalDetails}
                                 checked={minimalShowDetails}
                                 onChange={(value) => settings.setMinimalShowDetails(value)}
                             />
@@ -75,8 +148,8 @@ export function SettingsPanel() {
                 ) : (
                     <PanelSectionRow>
                         <DropdownItem
-                            label="Стиль карусели"
-                            menuLabel="Стиль карусели"
+                            label={t.carouselStyle}
+                            menuLabel={t.carouselStyle}
                             rgOptions={[
                                 { data: 'steam', label: 'Steam' },
                                 { data: 'spotlight', label: 'Spotlight' },
@@ -88,10 +161,10 @@ export function SettingsPanel() {
                 )}
                 <PanelSectionRow>
                     <DropdownItem
-                        label="Список игр"
-                        menuLabel="Список игр"
+                        label={t.gamesList}
+                        menuLabel={t.gamesList}
                         rgOptions={[
-                            { data: RECENT_ROW, label: 'Недавние игры' },
+                            { data: RECENT_ROW, label: t.recentGames },
                             ...collections.map((c) => ({ data: c.id, label: `${c.name} (${c.count})` })),
                         ]}
                         selectedOption={rowChosen}
@@ -111,10 +184,10 @@ export function SettingsPanel() {
                 )}
             </PanelSection>
 
-            <PanelSection title="Страница игры">
+            <PanelSection title={t.gamePage}>
                 <PanelSectionRow>
                     <ToggleField
-                        label="Встроенная страница игры"
+                        label={t.enableGamePage}
                         checked={enabled}
                         onChange={(value) => settings.setEnabled(value)}
                     />
@@ -123,14 +196,14 @@ export function SettingsPanel() {
                     <>
                         <PanelSectionRow>
                             <ToggleField
-                                label="Компактный вид страницы"
+                                label={t.compactPage}
                                 checked={cleanPage}
                                 onChange={(value) => settings.setCleanPage(value)}
                             />
                         </PanelSectionRow>
                         <PanelSectionRow>
                             <ToggleField
-                                label="Скрывать обложку на странице игры"
+                                label={t.hideCover}
                                 checked={hideGameCover}
                                 onChange={(value) => settings.setHideGameCover(value)}
                             />
@@ -139,41 +212,41 @@ export function SettingsPanel() {
                 )}
             </PanelSection>
 
-            <PanelSection title="Элементы">
+            <PanelSection title={t.elements}>
                 <PanelSectionRow>
                     <ToggleField
-                        label="Логотипы игр"
+                        label={t.gameLogos}
                         checked={gameLogo}
                         onChange={(value) => settings.setGameLogo(value)}
                     />
                 </PanelSectionRow>
                 <PanelSectionRow>
                     <ToggleField
-                        label="Время игры рядом с «Играть»"
+                        label={t.playtimeChip}
                         checked={showPlaytime}
                         onChange={(value) => settings.setShowPlaytime(value)}
                     />
                 </PanelSectionRow>
                 <PanelSectionRow>
                     <ToggleField
-                        label="HowLongToBeat рядом с «Играть»"
+                        label={t.hltbChip}
                         checked={showHltb}
                         onChange={(value) => settings.setShowHltb(value)}
                     />
                 </PanelSectionRow>
                 <PanelSectionRow>
                     <ToggleField
-                        label="Скрывать фон верхней панели"
+                        label={t.hideTopBg}
                         checked={hideStatusBarBackground}
                         onChange={(value) => settings.setHideStatusBarBackground(value)}
                     />
                 </PanelSectionRow>
             </PanelSection>
 
-            <PanelSection title="HowLongToBeat">
+            <PanelSection title={t.hltb}>
                 <PanelSectionRow>
                     <ToggleField
-                        label="Автозагрузка HLTB"
+                        label={t.autoPreload}
                         checked={autoPreload}
                         onChange={(value) => settings.setAutoPreload(value)}
                     />
@@ -183,10 +256,10 @@ export function SettingsPanel() {
                         layout="below"
                         onClick={async () => {
                             await cache.clear();
-                            toaster.toast({ title: PLUGIN_NAME, body: 'Кэш HLTB очищен' });
+                            toaster.toast({ title: PLUGIN_NAME, body: t.cacheCleared });
                         }}
                     >
-                        Очистить кэш HLTB
+                        {t.clearCache}
                     </ButtonItem>
                 </PanelSectionRow>
             </PanelSection>

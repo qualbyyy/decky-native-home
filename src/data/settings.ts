@@ -6,8 +6,10 @@ import { readScreensaverOptions, SCREENSAVER_DEFAULTS, ScreensaverOptions } from
 
 export type HomeLayout = 'carousel' | 'minimal';
 export type MinimalSide = 'left' | 'right';
+export type PluginLanguage = 'en' | 'ru';
 
 export interface Settings {
+    language: PluginLanguage;
     enabled: boolean;
     autoPreload: boolean; // pre-load game data for installed games in the background
     spotlightHome: boolean; // replace Steam's Home screen with Native Home
@@ -30,7 +32,7 @@ export interface Settings {
 }
 
 const KEY = 'native_home_settings';
-const DEFAULTS: Settings = { enabled: true, autoPreload: true, spotlightHome: true, homeLayout: 'carousel', minimalSide: 'left', minimalShowDetails: true, showPlaytime: true, showHltb: true, wishlistDeals: false, cleanPage: false, homeStatusBar: false, hideStatusBarBackground: true, statusAvatar: false, hideGameCover: false, gameLogo: true, homeRow: RECENT_ROW, homeRowSort: 'lastPlayed', homeRowStyle: 'steam', screensaver: SCREENSAVER_DEFAULTS };
+const DEFAULTS: Settings = { language: 'en', enabled: true, autoPreload: true, spotlightHome: true, homeLayout: 'carousel', minimalSide: 'left', minimalShowDetails: true, showPlaytime: true, showHltb: true, wishlistDeals: false, cleanPage: false, homeStatusBar: false, hideStatusBarBackground: true, statusAvatar: false, hideGameCover: false, gameLogo: true, homeRow: RECENT_ROW, homeRowSort: 'lastPlayed', homeRowStyle: 'steam', screensaver: SCREENSAVER_DEFAULTS };
 
 export function createSettingsStore(kv: KvBackend) {
     let current: Settings = { ...DEFAULTS };
@@ -42,6 +44,7 @@ export function createSettingsStore(kv: KvBackend) {
             const pick = <K extends keyof Settings>(key: K): Settings[K] =>
                 typeof raw?.[key] === 'boolean' ? (raw[key] as Settings[K]) : DEFAULTS[key];
             current = {
+                language: raw?.language === 'ru' ? 'ru' : 'en',
                 enabled: pick('enabled'),
                 autoPreload: pick('autoPreload'),
                 spotlightHome: pick('spotlightHome'),
@@ -65,6 +68,11 @@ export function createSettingsStore(kv: KvBackend) {
             emit();
         },
         get: (): Settings => current,
+        async setLanguage(language: PluginLanguage): Promise<void> {
+            current = { ...current, language };
+            emit();
+            await kv.set(KEY, current);
+        },
         async setMinimalShowDetails(minimalShowDetails: boolean): Promise<void> {
             current = { ...current, minimalShowDetails };
             emit();
