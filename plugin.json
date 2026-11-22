@@ -1,0 +1,10 @@
+{
+  "name": "Native Home",
+  "author": "qualbyy",
+  "flags": [],
+  "api_version": 1,
+  "publish": {
+    "tags": ["home", "ui", "theme"],
+    "description": "Native Steam Deck Home logos, Play/Settings quick actions, and seamless game page transitions with CSS Loader theme support."
+  }
+}
