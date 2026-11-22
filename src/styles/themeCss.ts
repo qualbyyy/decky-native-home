@@ -262,6 +262,7 @@ export function buildThemeCss(classes: ThemeClasses, options: ThemeOptions = {})
     const hidden = present([cls(play, 'StatusAndStats'), cls(play, 'GameStatsSection'), cls(play, 'Playtime'), cls(play, 'LastPlayed')]);
 
     const layout = topCapsule && inner && overviewPanel && tabs;
+    const newGameOverview = inner && overviewPanel ? `${inner}:has(> .gg-titleblock[data-gg-new]) ${overviewPanel}` : null;
 
     const rules: string[] = [
         `:root {
@@ -398,6 +399,7 @@ export function buildThemeCss(classes: ThemeClasses, options: ThemeOptions = {})
             // The cards are an overlay under the Play row; keep Steam's controls above them in every page look.
             rule(playSection, ` position: relative !important; z-index: 3 !important; `),
             rule(overviewPanel, ` margin-top: calc(var(--gg-play-top) - 100vh) !important; position: relative !important; z-index: 3 !important; `),
+            rule(newGameOverview, ` margin-top: calc(var(--gg-play-top) - 100vh - ${d(NEW_GAME_PLAY_OFFSET)}) !important; `),
             rule(backdrop, ` display: none !important; `),
             rule(appRoot, ` background: transparent !important; `),
             rule(tabs, ` margin-top: calc(100vh - var(--gg-play-top) - var(--gg-row-h)) !important; background: var(--ctp-base, rgba(14, 20, 27, 0.9)) !important; `),
@@ -425,7 +427,7 @@ export const UNIFIDECK_PRIMARY = ['.unifideck-play-btn', '.unifideck-install-btn
 export const UNIFIDECK_META = `${UNIFIDECK_PAGE} :is(${UNIFIDECK_PRIMARY.join(', ')}) + div:not([class])`;
 
 /**
- * The Game Glance layout on a Unifideck game's page, as its own stylesheet next to buildThemeCss's (with the layout only;
+ * The Native Home layout on a Unifideck game's page, as its own stylesheet next to buildThemeCss's (with the layout only;
  * scoped to Unifideck's own page class, so no other page is touched; '' when the layout's classes are missing). Its Play row moves onto the art at the Play row's place (its info panel then starts the next
  * screen, as Steam's tabs do) and its primary button becomes our accent pill. Its circle buttons wear Steam's
  * MenuButton class, so the round buttons above already apply to them; its icon group wears AppButtons (no push right).
@@ -493,9 +495,11 @@ const TV_CARDS_H = PAGE_LAYOUT.playTop.tvCards;
 const TV_CARDS_GAP = PAGE_LAYOUT.playTop.tvGap;
 const CLEAN_MIN_BELOW_ROW = PAGE_LAYOUT.clean.minBelowRow;
 const CLEAN_GAP = PAGE_LAYOUT.clean.gap;
+/** Steam leaves an extra 70 handoff px before the Play section for a new-to-library game. */
+const NEW_GAME_PLAY_OFFSET = 70;
 
 /**
- * The Game Glance page's Clean look (homeMode().cleanDetails, on top of the restyled page): the art takes the screen;
+ * The Native Home page's Clean look (homeMode().cleanDetails, on top of the restyled page): the art takes the screen;
  * the eyebrow and title sit just above one row at the bottom, which holds Steam's Play row (Play, controller, settings,
  * cloud) at the left and our info card (.gg-clean-info: played, achievements, HLTB main) at the right; the store pill
  * sits above the row at the right edge. The description and HowLongToBeat cards are not shown; Steam's tabs still
@@ -614,7 +618,7 @@ export function buildLaunchCss(classes: ThemeClasses): string {
 }
 
 /**
- * Spotlight Home's details look (handoff "2. Game Glance (details)"), appended after the 1.1.1 rules so they win
+ * Spotlight Home's details look (handoff "2. Native Home (details)"), appended after the 1.1.1 rules so they win
  * without touching them. Same defensive pattern: a rule needing a Steam class that is missing is skipped. On Steam's
  * elements it only sets colours, the focus glow, the scrim, the logo's visibility (its box stays in place) and the
  * Play row's side padding (the handoff's 56 px insets); everything else styles our own `.gg-*` elements.
@@ -847,7 +851,7 @@ function cleanBarsArriving(brought: string[] | undefined): string {
 /**
  * Steam's own page-enter fade switched off (TopLevelTransition Enter/EnterActive: a 200 ms delay, then 600 ms of
  * opacity and transform; probed on the Ally). The open transition's bridge carries it while it is up (so Steam's own
- * page, too, is there at once under it) and the arriving Game Glance page repeats it; '' when the classes are unknown.
+ * page, too, is there at once under it) and the arriving Native Home page repeats it; '' when the classes are unknown.
  */
 export function buildSteamEnterOffCss({ transition }: ThemeClasses): string {
     const top = cls(transition, 'TopLevelTransition');

@@ -19,20 +19,22 @@ export interface Settings {
     showPlaytime: boolean;
     showHltb: boolean;
     wishlistDeals: boolean; // look up wishlist sales on Steam's public store
-    cleanPage: boolean; // the Game Glance page's Clean look: one row at the bottom, no description or HowLongToBeat cards
+    cleanPage: boolean; // the Native Home page's Clean look: one row at the bottom, no description or HowLongToBeat cards
     homeStatusBar: boolean; // Spotlight Home's status bar: clock, battery and connection in Steam's top strip
     hideStatusBarBackground: boolean; // hide the glass background behind the custom status bar
     statusAvatar: boolean; // your avatar, round and ringed in your status colour, in the status bar instead of the dot
     hideGameCover: boolean; // hide the game's cover art on the game page
     gameLogo: boolean; // the game's logo instead of its name on Home and the game page (the name when it has none)
+    showNewLabel: boolean; // show the 'New' marker for games new to the library
+    showLastPlayedLabel: boolean; // show the 'Last played' eyebrow on Home and the game page
     homeRow: string; // Home's games row: 'recent' (Steam's recent games, with those new to the library) or a collection id
     homeRowSort: RowSort; // how a collection's games are sorted in the row
     homeRowStyle: RowStyle; // how the row moves: 'steam' (Steam's Home: the first game wide) or 'spotlight' (the selected game wide, at the left)
-    screensaver: ScreensaverOptions; // Steam's screensaver drawn by Game Glance (screensaver/options)
+    screensaver: ScreensaverOptions; // Steam's screensaver drawn by Native Home (screensaver/options)
 }
 
 const KEY = 'native_home_settings';
-const DEFAULTS: Settings = { language: 'en', enabled: true, autoPreload: true, spotlightHome: true, homeLayout: 'carousel', minimalSide: 'left', minimalShowDetails: true, showPlaytime: true, showHltb: true, wishlistDeals: false, cleanPage: false, homeStatusBar: false, hideStatusBarBackground: true, statusAvatar: false, hideGameCover: false, gameLogo: true, homeRow: RECENT_ROW, homeRowSort: 'lastPlayed', homeRowStyle: 'steam', screensaver: SCREENSAVER_DEFAULTS };
+const DEFAULTS: Settings = { language: 'en', enabled: true, autoPreload: true, spotlightHome: true, homeLayout: 'carousel', minimalSide: 'left', minimalShowDetails: true, showPlaytime: true, showHltb: true, wishlistDeals: false, cleanPage: false, homeStatusBar: false, hideStatusBarBackground: true, statusAvatar: false, hideGameCover: false, gameLogo: true, showNewLabel: true, showLastPlayedLabel: true, homeRow: RECENT_ROW, homeRowSort: 'lastPlayed', homeRowStyle: 'steam', screensaver: SCREENSAVER_DEFAULTS };
 
 export function createSettingsStore(kv: KvBackend) {
     let current: Settings = { ...DEFAULTS };
@@ -60,6 +62,8 @@ export function createSettingsStore(kv: KvBackend) {
                 statusAvatar: false,
                 hideGameCover: pick('hideGameCover'),
                 gameLogo: pick('gameLogo'),
+                showNewLabel: pick('showNewLabel'),
+                showLastPlayedLabel: pick('showLastPlayedLabel'),
                 homeRow: typeof raw?.homeRow === 'string' && raw.homeRow !== '' ? raw.homeRow : DEFAULTS.homeRow,
                 homeRowSort: rowSortOf(raw?.homeRowSort),
                 homeRowStyle: rowStyleOf(raw?.homeRowStyle),
@@ -160,6 +164,16 @@ export function createSettingsStore(kv: KvBackend) {
         },
         async setGameLogo(gameLogo: boolean): Promise<void> {
             current = { ...current, gameLogo };
+            emit();
+            await kv.set(KEY, current);
+        },
+        async setShowNewLabel(showNewLabel: boolean): Promise<void> {
+            current = { ...current, showNewLabel };
+            emit();
+            await kv.set(KEY, current);
+        },
+        async setShowLastPlayedLabel(showLastPlayedLabel: boolean): Promise<void> {
+            current = { ...current, showLastPlayedLabel };
             emit();
             await kv.set(KEY, current);
         },

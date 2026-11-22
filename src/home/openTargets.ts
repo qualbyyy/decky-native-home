@@ -1,7 +1,7 @@
 import { cardMaxWidths, PAGE_LAYOUT, pageDUnit, STEAM_LEGEND_PX } from '../styles/themeCss';
 
 /**
- * Where the Game Glance page (restyled, Spotlight or Clean look) puts the things Spotlight Home morphs into during the
+ * Where the Native Home page (restyled, Spotlight or Clean look) puts the things Spotlight Home morphs into during the
  * open transition, for a Big Picture window of a given size. Built from the same constants as the page's theme
  * (themeCss.PAGE_LAYOUT), so the two cannot drift apart; checked against layouts measured on the device
  * (tests/home/fixtures/openLayout). CSS px of the Big Picture window. Pure.

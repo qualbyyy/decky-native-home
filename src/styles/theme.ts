@@ -72,7 +72,7 @@ export function unifideckCss(options?: ThemeOptions): string {
     return buildUnifideckCss(themeClasses(), options);
 }
 
-/** The Game Glance page's Clean look (themeCss.buildCleanCss); '' without the layout's classes. */
+/** The Native Home page's Clean look (themeCss.buildCleanCss); '' without the layout's classes. */
 export function cleanCss(): string {
     return buildCleanCss(themeClasses());
 }

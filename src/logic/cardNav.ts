@@ -44,7 +44,7 @@ export function landingFor<T>(to: CardZone, memory: { row: T | null; card: T | n
 }
 
 /**
- * `target` as an element, by what it is (an element node that can take focus), never by `instanceof`: Game Glance runs in
+ * `target` as an element, by what it is (an element node that can take focus), never by `instanceof`: Native Home runs in
  * Steam's shared context, and the page's elements belong to the Big Picture window, whose HTMLElement is another one.
  * (instanceof was always false there, so Up from the cards never knew the button Down had left from.) Pure.
  */

@@ -4,7 +4,7 @@ import { tr } from '../i18n/steamText';
  * Games from the user's Steam Families library (borrowed, not owned). Steam marks them in the app overview with
  * `owner_account_id`, the 32-bit account id of the family member who owns the game (probed on the Ally: Death's Door,
  * owned by a friend; the user's own games have none). Steam's game page says so in a line under Play, which the
- * restyled page has no room for; Game Glance shows it as a pill beside the store pill instead, on Home and the game
+ * restyled page has no room for; Native Home shows it as a pill beside the store pill instead, on Home and the game
  * page, with the owner's name when they are on the friends list.
  */
 

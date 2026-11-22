@@ -102,7 +102,7 @@ function useBoxSize(ref: RefObject<HTMLDivElement | null>): Size | null {
 export function SpotlightHome() {
     const [recentIndex, setRecentIndex] = useState(0);
     const [restore] = useState(takeRestore);
-    const { gameLogo, homeRowStyle, homeLayout, minimalSide, minimalShowDetails, showPlaytime, showHltb, hideStatusBarBackground } = useSettings();
+    const { gameLogo, showNewLabel, showLastPlayedLabel, homeRowStyle, homeLayout, minimalSide, minimalShowDetails, showPlaytime, showHltb, hideStatusBarBackground } = useSettings();
     const showHeroPanel = homeLayout !== 'minimal' || minimalShowDetails;
     const [resolved, setResolved] = useState(restore === null);
     const [restoring, setRestoring] = useState(restore !== null);
@@ -391,6 +391,11 @@ export function SpotlightHome() {
     const rowViewport = canvas.logicalWidth - 2 * rowInset(side, tv);
     const css = useMemo(() => homeCss(scale, { hideStatusBarBackground }), [scale, hideStatusBarBackground]);
     const game = data.focused;
+    const homeEyebrow = data.focusedIsNew
+        ? eyebrowText(showNewLabel ? data.lastPlayedLabel : null, false, showNewLabel, data.rowCollection !== null)
+        : showLastPlayedLabel
+            ? eyebrowText(data.lastPlayedLabel, false, false, data.rowCollection !== null)
+            : '';
     const contentUp = measuredScale !== null && resolved;
 
     const inlineChips = onLibrary
@@ -456,12 +461,13 @@ export function SpotlightHome() {
                                             <TitleBlock eyebrow={eyebrowText(null, true)} title={tr('viewLibrary')} />
                                         ) : (
                                             <TitleBlock
-                                                eyebrow={collectionEyebrow(data.rowCollection, eyebrowText(data.lastPlayedLabel, false, data.focusedIsNew, data.rowCollection !== null))}
+                                                eyebrow={collectionEyebrow(data.rowCollection, homeEyebrow)}
                                                 title={game.name}
                                                 appId={game.appId}
                                                 logo={gameLogo}
                                                 version={data.detailsVersion}
                                                 resolve={!cycle.holding}
+                                                isNew={data.focusedIsNew}
                                             />
                                         )}
                                         <div className="gh-action-bar">
@@ -496,6 +502,7 @@ export function SpotlightHome() {
                                         nav={recentsNav}
                                         rowStyle={homeRowStyle}
                                         viewport={rowViewport}
+                                        showNewLabel={showNewLabel}
                                         expand={!cycle.narrow}
                                         snap={cycle.holding}
                                     />

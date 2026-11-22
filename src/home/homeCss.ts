@@ -29,7 +29,7 @@ function soft(selector: string, body: string): string {
 /**
  * Properties Home animates that are never `!important`: Chromium runs no animation of an !important property on its
  * compositor (kAffectsImportantProperty, probed on the Ally), so the open transition's motion ran on the main thread,
- * repainting every frame, and stalled. Nothing outside Game Glance sets them on Home's elements (probed: 441 elements),
+ * repainting every frame, and stalled. Nothing outside Native Home sets them on Home's elements (probed: 441 elements),
  * and dropping !important from all of them alike keeps every rule's place against the others.
  */
 const ANIMATED = /^(transform|opacity)\s*:/;

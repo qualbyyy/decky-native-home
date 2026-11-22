@@ -1,4 +1,5 @@
 import type { OpenBridge } from './openTransition';
+import { COVERED } from './useHideSteamBar';
 
 /**
  * The open transition's bridge: a frozen copy of Spotlight Home's root, in its final (page-shaped) state, placed over
@@ -46,8 +47,18 @@ export function mountOpenBridge(root: HTMLElement, css = '', extras: Element[] =
     // half the copy's style and layout work, in the frame Steam is busiest.
     if (drop.length > 0) for (const el of [...copy.querySelectorAll(drop.join(', '))]) el.remove();
     box.appendChild(copy);
-    // Layers Home draws outside its root (our status bar, which also keeps Steam's top bar hidden), copied over the top.
-    for (const extra of extras) box.appendChild(extra.cloneNode(true));
+    // Layers Home draws outside its root (the top bar, status bar and footer), copied over the top.
+    for (const extra of extras) {
+        const clone = extra.cloneNode(true) as HTMLElement;
+        clone.querySelectorAll(`[${COVERED}]`).forEach((el) => el.removeAttribute(COVERED));
+        clone.removeAttribute(COVERED);
+        if (extra.id === 'header') {
+            clone.style.setProperty('opacity', '1', 'important');
+            clone.style.setProperty('visibility', 'visible', 'important');
+            clone.style.setProperty('transition', 'none', 'important');
+        }
+        box.appendChild(clone);
+    }
     parent.appendChild(box);
     let removed = false;
     return {

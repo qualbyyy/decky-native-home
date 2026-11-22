@@ -17,6 +17,7 @@ import { clearOpen, markOpen, onOpenReady, OpenIntent } from '../data/openIntent
 import { pageArrivalSelectors, pageTwinTargets, steamEnterOffCss, steamFooter } from '../styles/theme';
 import { MOUSE_ATTR } from './mouseMode';
 import { clearSteamBarCover } from './useHideSteamBar';
+import { findTopBar } from './topBar';
 
 /** Opens a game's page directly, without the transition (Play pill fallbacks, Steam call fallbacks). */
 export function openPage(appId: number) {
@@ -205,7 +206,7 @@ function startHome(c: OpenContext): (() => void) | null {
     return applyOpening(root, c.variant, [], c.variant === 'heroFade' ? c.heroUrl : null);
 }
 
-/** Calls `cb` when the opened page is ready: the Game Glance page reports it (openIntent); Steam's own page is ready when its hero has loaded. */
+/** Calls `cb` when the opened page is ready: the Native Home page reports it (openIntent); Steam's own page is ready when its hero has loaded. */
 function whenReady(c: OpenContext, cb: () => void): () => void {
     if (c.intent.look !== 'steam') return onOpenReady((id) => id === c.appId && cb());
     const doc = c.root?.ownerDocument;
@@ -236,7 +237,8 @@ function controller(): OpenTransition {
             // Our status bar lives outside Home's root; its copy also keeps Steam's top bar hidden until the page's own takes over.
             // Steam's footer is one element over every page: the copy would cover it, so it carries a copy of it too.
             const footer = steamFooter();
-            const extras = [...doc.querySelectorAll('.gg-status-host'), ...(footer ? [...doc.querySelectorAll(footer)] : [])];
+            const topBar = findTopBar(doc, doc.defaultView?.innerWidth ?? 0);
+            const extras = [topBar, ...doc.querySelectorAll('.gg-status-host'), ...(footer ? [...doc.querySelectorAll(footer)] : [])].filter((el): el is Element => el !== null);
             // Home's game row, tabs and feed have left (or faded with the rest) by the hand-over: the copy goes without them.
             // At the page's ready the copy's text twins glide onto the page's text as measured (openHome.settleTwins).
             const look = c.intent.look;
@@ -277,6 +279,7 @@ export function openGame(appId: number, source?: HTMLElement | null) {
         const heroUrl = art?.mode === 'full' ? art.url : (urls(() => heroUrls(appId, browserStores))[0] ?? null);
         // The page shows Home's eyebrow words when Home morphed into it, so they do not change at the hand-over.
         const eyebrow = variant === 'morph' ? root?.querySelector('.gh-eyebrow')?.textContent?.trim() || undefined : undefined;
+        const newGame = variant === 'morph' && root?.querySelector('.gh-eyebrow[data-new]') !== null;
         // Home without its cloud button (the state was not known yet): the page's arrives instead of popping in.
         const homeCloud = variant === 'morph' && root ? root.querySelector('.gh-actions .gh-btn[data-action="cloud"]') !== null : undefined;
         // Clean: the chips whose bar the morph moves onto the panel's (openMotion), so the page's do not fade in again.
@@ -292,7 +295,7 @@ export function openGame(appId: number, source?: HTMLElement | null) {
         const homeChipKeys = variant === 'morph' && root ? readChipTexts(root).map((c) => c.key) : [];
         // A Unifideck game's Uninstall circle Home draws as it opens (.gh-open-circle): the page's must not arrive again.
         const homeUninstall = variant === 'morph' && root ? root.querySelector('.gh-open-circle') !== null : undefined;
-        const intent: OpenIntent = { look: pageRestyled ? look : 'steam', mode: variant === 'morph' ? 'parts' : 'all', eyebrow, homeCloud, homeBars, homeFamily, homeMissing, homeUninstall, ...extrasFlags(extras, homeChipKeys) };
+        const intent: OpenIntent = { look: pageRestyled ? look : 'steam', mode: variant === 'morph' ? 'parts' : 'all', eyebrow, newGame, homeCloud, homeBars, homeFamily, homeMissing, homeUninstall, ...extrasFlags(extras, homeChipKeys) };
         next = { root, appId, variant, look, heroUrl, intent, extras };
         controller().open(appId, variant);
     } catch (error) {

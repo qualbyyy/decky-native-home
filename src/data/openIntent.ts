@@ -14,7 +14,7 @@ export const OPEN_INTENT_MS = 3000;
 /** 'parts': Home morphed into the page, only the page's new parts arrive; 'all': the whole page arrives (fades in). */
 export type ArriveMode = 'parts' | 'all';
 /**
- * The page's look the open was made for ('steam': the Game Glance page is off, Steam's own page opens), how it arrives,
+ * The page's look the open was made for ('steam': the Native Home page is off, Steam's own page opens), how it arrives,
  * `eyebrow`: Home's eyebrow words at the open (the page shows the same, so nothing changes at the hand-over), and
  * `homeCloud`: whether Home showed its cloud button (false: its state was not known yet, so the page's arrives), and
  * `homeBars`: the stats whose progress bar Home's morph moved onto the page's (those bars do not arrive again), and
@@ -28,6 +28,8 @@ export interface OpenIntent {
     look: PageLook | 'steam';
     mode: ArriveMode;
     eyebrow?: string;
+    /** Home selected a game new to the library; its native Play section has a taller offset. */
+    newGame?: boolean;
     homeCloud?: boolean;
     homeBars?: string[];
     homeDesc?: boolean;

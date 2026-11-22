@@ -1,8 +1,9 @@
 import { toaster } from '@decky/api';
 import { ButtonItem, DropdownItem, PanelSection, PanelSectionRow, ToggleField } from '@decky/ui';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { PLUGIN_NAME } from '../constants';
 import { cache } from '../data/cache';
+import { checkRepositoryUpdate, RepositoryUpdateState } from '../data/repositoryUpdate';
 import { HomeLayout, MinimalSide, PluginLanguage, settings, useSettings } from '../data/settings';
 import { RECENT_ROW, ROW_SORTS, RowSort, rowSortLabel, sortByLabel, steamHomeCollections } from '../home/collections';
 import { RowStyle } from '../home/recentsLayout';
@@ -28,6 +29,8 @@ const LABELS = {
         hideCover: 'Hide cover on game page',
         elements: 'Elements',
         gameLogos: 'Game logos',
+        newLabel: 'Show “New” marker',
+        lastPlayedLabel: 'Show “Last played” text',
         playtimeChip: 'Playtime next to Play',
         hltbChip: 'HowLongToBeat next to Play',
         hideTopBg: 'Hide top bar background',
@@ -35,6 +38,12 @@ const LABELS = {
         autoPreload: 'Auto-preload HLTB',
         clearCache: 'Clear HLTB cache',
         cacheCleared: 'HLTB cache cleared',
+        updates: 'Updates',
+        checkUpdates: 'Check for updates',
+        checkingUpdates: 'Checking for updates…',
+        upToDate: (version: string) => `You have the latest version (${version})`,
+        updateAvailable: (version: string) => `Available version ${version}`,
+        updateError: 'Could not check the GitHub repository',
     },
     ru: {
         home: 'Главная',
@@ -56,6 +65,8 @@ const LABELS = {
         hideCover: 'Скрывать обложку на странице игры',
         elements: 'Элементы',
         gameLogos: 'Логотипы игр',
+        newLabel: 'Показывать метку «Новое»',
+        lastPlayedLabel: 'Показывать текст «Последний запуск»',
         playtimeChip: 'Время игры рядом с «Играть»',
         hltbChip: 'HowLongToBeat рядом с «Играть»',
         hideTopBg: 'Скрывать фон верхней панели',
@@ -63,6 +74,12 @@ const LABELS = {
         autoPreload: 'Автозагрузка HLTB',
         clearCache: 'Очистить кэш HLTB',
         cacheCleared: 'Кэш HLTB очищен',
+        updates: 'Обновления',
+        checkUpdates: 'Проверить обновления',
+        checkingUpdates: 'Проверка обновлений…',
+        upToDate: (version: string) => `Установлена последняя версия (${version})`,
+        updateAvailable: (version: string) => `Доступна версия ${version}`,
+        updateError: 'Не удалось проверить репозиторий GitHub',
     },
 } as const;
 
@@ -79,6 +96,8 @@ export function SettingsPanel() {
         homeRow,
         homeRowSort,
         gameLogo,
+        showNewLabel,
+        showLastPlayedLabel,
         showPlaytime,
         showHltb,
         hideStatusBarBackground,
@@ -86,24 +105,24 @@ export function SettingsPanel() {
         autoPreload,
     } = useSettings();
     const t = LABELS[language];
+    const [updateState, setUpdateState] = useState<RepositoryUpdateState | { status: 'idle' | 'checking'; current: string | null }>({ status: 'idle', current: null });
     const collections = useMemo(steamHomeCollections, []);
+    const checkUpdates = async () => {
+        setUpdateState({ status: 'checking', current: updateState.current });
+        const next = await checkRepositoryUpdate();
+        setUpdateState(next);
+        const body = next.status === 'upToDate'
+            ? t.upToDate(next.latest)
+            : next.status === 'available'
+                ? t.updateAvailable(next.latest)
+                : t.updateError;
+        toaster.toast({ title: PLUGIN_NAME, body });
+    };
     const rowChosen = collections.some((c) => c.id === homeRow) ? homeRow : RECENT_ROW;
 
     return (
         <>
             <PanelSection title={t.home}>
-                <PanelSectionRow>
-                    <DropdownItem
-                        label={t.language}
-                        menuLabel={t.language}
-                        rgOptions={[
-                            { data: 'en', label: 'English' },
-                            { data: 'ru', label: 'Русский' },
-                        ]}
-                        selectedOption={language}
-                        onChange={(option) => settings.setLanguage(option.data as PluginLanguage)}
-                    />
-                </PanelSectionRow>
                 <PanelSectionRow>
                     <ToggleField
                         label={t.enableHome}
@@ -222,6 +241,20 @@ export function SettingsPanel() {
                 </PanelSectionRow>
                 <PanelSectionRow>
                     <ToggleField
+                        label={t.newLabel}
+                        checked={showNewLabel}
+                        onChange={(value) => settings.setShowNewLabel(value)}
+                    />
+                </PanelSectionRow>
+                <PanelSectionRow>
+                    <ToggleField
+                        label={t.lastPlayedLabel}
+                        checked={showLastPlayedLabel}
+                        onChange={(value) => settings.setShowLastPlayedLabel(value)}
+                    />
+                </PanelSectionRow>
+                <PanelSectionRow>
+                    <ToggleField
                         label={t.playtimeChip}
                         checked={showPlaytime}
                         onChange={(value) => settings.setShowPlaytime(value)}
@@ -261,6 +294,29 @@ export function SettingsPanel() {
                     >
                         {t.clearCache}
                     </ButtonItem>
+                </PanelSectionRow>
+            </PanelSection>
+
+            <PanelSection title={t.updates}>
+                <PanelSectionRow>
+                    <ButtonItem layout="below" onClick={checkUpdates}>
+                        {updateState.status === 'checking' ? t.checkingUpdates : t.checkUpdates}
+                    </ButtonItem>
+                </PanelSectionRow>
+            </PanelSection>
+
+            <PanelSection title={t.language}>
+                <PanelSectionRow>
+                    <DropdownItem
+                        label={t.language}
+                        menuLabel={t.language}
+                        rgOptions={[
+                            { data: 'en', label: 'English' },
+                            { data: 'ru', label: 'Русский' },
+                        ]}
+                        selectedOption={language}
+                        onChange={(option) => settings.setLanguage(option.data as PluginLanguage)}
+                    />
                 </PanelSectionRow>
             </PanelSection>
         </>

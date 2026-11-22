@@ -91,7 +91,7 @@ export function greyedOut(game: Pick<HomeGame, 'installed' | 'shortcut'>): boole
  * One recents card. Memoized on plain props, so an L1/R1 step re-renders only the cards whose place or state changed;
  * its art urls are read from Steam's stores only when the game or its expanded state changes.
  */
-const GameCapsule = memo(function GameCapsule({ game, index, left, width, dim, wide, selected, hover, blur, box, onTap }: { game: HomeGame; index: number; left: number; width: number; dim: boolean; wide: boolean; selected: boolean; hover: boolean; blur: boolean; box: ArtBox; onTap(index: number, event: MouseEvent): void }) {
+const GameCapsule = memo(function GameCapsule({ game, index, left, width, dim, wide, selected, hover, blur, box, showNewLabel, onTap }: { game: HomeGame; index: number; left: number; width: number; dim: boolean; wide: boolean; selected: boolean; hover: boolean; blur: boolean; box: ArtBox; showNewLabel: boolean; onTap(index: number, event: MouseEvent): void }) {
     const appId = game.appId;
     const cover = useMemo(() => urls(() => capsuleUrls(appId, browserStores)), [appId]);
     const list = useMemo(
@@ -103,9 +103,9 @@ const GameCapsule = memo(function GameCapsule({ game, index, left, width, dim, w
         <div className={`gh-cap${wide ? ' gh-cap-wide' : ''}${selected ? ' gh-cap-sel' : ''}${hover ? ' gh-cap-hover' : ''}${greyedOut(game) ? ' gh-cap-off' : ''}`} data-hover={`g${index}`} style={{ left: `${left}px`, width: `${width}px`, opacity: dim ? 0.35 : 1 }} onClick={(event) => onTap(index, event)}>
             <CapsuleArt cover={cover} art={art} blur={blur} />
             {/* A game new to the library, as Steam's Home marks it, and a demo: side by side on the wide card, stacked on a capsule. */}
-            {(game.isNew || game.demo) && (
+            {((showNewLabel && game.isNew) || game.demo) && (
                 <div className="gh-cap-marks">
-                    {game.isNew && <div className="gh-cap-new">{tr('newMark')}</div>}
+                    {showNewLabel && game.isNew && <div className="gh-cap-new">{tr('newMark')}</div>}
                     {game.demo && <div className="gh-cap-new">{tr('demoMark')}</div>}
                 </div>
             )}
@@ -144,7 +144,7 @@ export interface RecentsRowNav {
  * browser's click) on another card selects it, on the selected card opens it (rowDrag.cardTap); a ghost selects its game. Rendered only with games. `geometry` is the card scale's sizes
  * (handheld or docked), the same SpotlightHome gives homeCss.
  */
-export function RecentsRow({ games, selected, geometry, nav, rowStyle = 'spotlight', viewport = 0, expand = true, snap = false }: { games: HomeGame[]; selected: number; geometry: RecentsGeometry; nav: RecentsRowNav; rowStyle?: RowStyle; viewport?: number; expand?: boolean; snap?: boolean }) {
+export function RecentsRow({ games, selected, geometry, nav, rowStyle = 'spotlight', viewport = 0, showNewLabel = true, expand = true, snap = false }: { games: HomeGame[]; selected: number; geometry: RecentsGeometry; nav: RecentsRowNav; rowStyle?: RowStyle; viewport?: number; showNewLabel?: boolean; expand?: boolean; snap?: boolean }) {
     const count = games.length;
     const at = clampFocus(count, selected);
     // Steam's style: the first game is the wide card and the selection moves to the middle (`viewport`); a fast run
@@ -217,6 +217,7 @@ export function RecentsRow({ games, selected, geometry, nav, rowStyle = 'spotlig
                         hover={hover.hovered === `g${i}`}
                         box={box}
                         blur={capsuleBlur(i, at, steam)}
+                        showNewLabel={showNewLabel}
                     />
                 ))}
                 <div className={`gh-cap gh-cap-lib${onLibrary ? ' gh-cap-lib-on' : ''}${hover.hovered === 'lib' ? ' gh-cap-hover' : ''}`} data-hover="lib" style={{ left: `${library.left}px`, width: `${library.width}px` }} onClick={(event) => onTap(count, event)}>

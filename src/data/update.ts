@@ -4,16 +4,16 @@ import { LOG_PREFIX, PLUGIN_NAME } from '../constants';
 import { cache, Cache, DAY_MS } from './cache';
 
 /**
- * The built-in updater: the latest GitHub release of Game Glance, compared with the installed version, installed
+ * The built-in release updater: the latest GitHub release of Native Home, compared with the installed version, installed
  * through Decky's own plugin installer (the loader route `utilities/install_plugin`, the same one Unifideck's updater
  * uses: Decky asks to confirm, downloads, installs and reloads the plugin). Only the release's public metadata is
  * fetched from api.github.com; nothing about the user is sent.
  */
-export const RELEASES_URL = 'https://api.github.com/repos/michpalm/game-glance/releases/latest';
-/** The release asset Decky installs (scripts/package.sh builds it). */
-export const ASSET_NAME = 'game-glance.zip';
-/** The same zip uploaded under a versioned name ("game-glance-v2.0.0.zip", as v2.0.0 was): taken when there is no ASSET_NAME. */
-const VERSIONED_ASSET = /^game-glance-v?\d+(\.\d+){1,3}\.zip$/i;
+export const RELEASES_URL = 'https://api.github.com/repos/qualbyyy/decky-native-home/releases/latest';
+/** The release asset Decky installs when the repository publishes a package. */
+export const ASSET_NAME = 'decky-native-home.zip';
+/** The same zip uploaded under a versioned name when there is no fixed asset name. */
+const VERSIONED_ASSET = /^decky-native-home-v?\d+(\.\d+){1,3}\.zip$/i;
 /** Decky's install type for an update of an installed plugin (1 reinstall, 2 update, 3 downgrade). */
 export const INSTALL_TYPE_UPDATE = 2;
 
@@ -83,7 +83,7 @@ export interface UpdateDeps {
 
 const getVersion = callable<[], string | null>('get_version');
 
-/** How often Game Glance looks for a new release by itself (as Ambideck does): once a day, also across restarts. */
+/** How often Native Home looks for a new release by itself (as Ambideck does): once a day, also across restarts. */
 export const UPDATE_CHECK_EVERY_MS = DAY_MS;
 /** How long GitHub's answer is kept: a little under a day, so the next daily check asks again. */
 export const LATEST_TTL_MS = DAY_MS - 5 * 60_000;
@@ -190,7 +190,7 @@ function runCheck(force: boolean): Promise<UpdateState> {
 }
 
 /**
- * The background check, as in Ambideck: once when Game Glance loads (GitHub's answer reused if it is under a day old),
+ * The background check, as in Ambideck: once when Native Home loads (GitHub's answer reused if it is under a day old),
  * then once a day while it keeps running (a handheld can go days between restarts, sleeping in between). Quiet: the
  * answer waits for Quick Access. Returns the stop for the plugin's dismount.
  */

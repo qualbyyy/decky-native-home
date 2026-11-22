@@ -1,5 +1,5 @@
 // Shim for hltb-for-deck's hooks/Cache.ts (MIT, see THIRD_PARTY_LICENSES.md).
-// Only the API-bootstrap cache used by HltbApi.ts, stored through Game Glance's
+// Only the API-bootstrap cache used by HltbApi.ts, stored through Native Home's
 // backend KV under the "cache:" prefix so "Clear cached data" also resets it.
 import { backendKv } from '../../../data/kv';
 

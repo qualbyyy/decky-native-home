@@ -110,7 +110,7 @@ function Hero({ overview, details, restyle, clean }: Props & { restyle: boolean;
     // Opened from Spotlight Home's open transition: Home's eyebrow words, kept for this visit (data/openIntent).
     const [openedFrom] = useState(() => openPending(game.appId));
 
-    const { homeStatusBar: statusBar, gameLogo, hideGameCover, hideStatusBarBackground } = useSettings();
+    const { homeStatusBar: statusBar, gameLogo, showNewLabel, showLastPlayedLabel, hideGameCover, hideStatusBarBackground } = useSettings();
     const accent = useGameAccent(game.appId, restyle);
     // Restyled only: the Play pill fills with Steam's download progress (hooks run either way; the CSS only when restyled).
     const { download } = useDownload(restyle && game.appId !== 0 ? game.appId : null);
@@ -159,7 +159,12 @@ function Hero({ overview, details, restyle, clean }: Props & { restyle: boolean;
     } catch {
         ringStyle = '';
     }
-    const eyebrow = restyle ? openedFrom?.eyebrow ?? lastPlayedEyebrow(overview, locale, unifideck?.lastPlayed ?? null) : null;
+    const newGame = openedFrom?.newGame === true;
+    const openedNewEyebrow = openedFrom?.eyebrow === tr('newToLibrary') || openedFrom?.eyebrow?.startsWith(`${tr('newToLibrary')} ·`);
+    const newEyebrow = newGame || openedNewEyebrow;
+    const openedEyebrow = openedNewEyebrow ? (showNewLabel ? openedFrom?.eyebrow : undefined) : (showLastPlayedLabel ? openedFrom?.eyebrow : undefined);
+    const fallbackEyebrow = showLastPlayedLabel ? lastPlayedEyebrow(overview, locale, unifideck?.lastPlayed ?? null) : null;
+    const eyebrow = restyle && (showNewLabel || !newEyebrow) ? openedEyebrow ?? fallbackEyebrow : null;
     return (
         <>
             {/* Spotlight Home's status bar, over Steam's top strip, with the restyled page (not while Steam's launch screen is up). */}
@@ -173,7 +178,7 @@ function Hero({ overview, details, restyle, clean }: Props & { restyle: boolean;
             )}
             {/* Spotlight Home's eyebrow and title; the theme shows them only with its full-screen layout, where Steam's logo was (hidden then). */}
             {restyle && game.name !== '' && (
-                <div className="gg-titleblock">
+                <div className="gg-titleblock" data-gg-new={newGame ? '' : undefined}>
                     {/* As on Home: the title (or logo) first, the eyebrow under it. */}
                     <GameTitle appId={game.appId} name={game.name} logo={gameLogo} className="gg-title" logoClassName="gg-logo" unit={pageUnit} />
                     {eyebrow && <div className="gg-eyebrow">{eyebrow}</div>}

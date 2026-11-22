@@ -29,13 +29,13 @@ export function InlineChips({ chips }: { chips: Chip[] }) {
 
 const px = (n: number) => `${n}px`;
 
-export function TitleBlock({ eyebrow, title, appId = 0, logo = false, version = 0, resolve = true }: { eyebrow: string; title: string; appId?: number; logo?: boolean; version?: number; resolve?: boolean }) {
+export function TitleBlock({ eyebrow, title, appId = 0, logo = false, version = 0, resolve = true, isNew = false }: { eyebrow: string; title: string; appId?: number; logo?: boolean; version?: number; resolve?: boolean; isNew?: boolean }) {
     return (
         <>
             <div className="gh-title-slot">
                 <GameTitle appId={appId} name={title} logo={logo} className="gh-title" logoClassName="gh-logo" unit={px} version={version} resolve={resolve} />
             </div>
-            <div className="gh-eyebrow">{eyebrow}</div>
+            <div className="gh-eyebrow" data-new={isNew ? '' : undefined}>{eyebrow}</div>
         </>
     );
 }

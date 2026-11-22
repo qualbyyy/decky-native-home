@@ -12,7 +12,7 @@ export interface CleanStat {
 }
 
 /**
- * The Clean look's info card (the Game Glance page's bottom row): Played, a Unifideck game's size (when known), Achievements (when the game has any) and
+ * The Clean look's info card (the Native Home page's bottom row): Played, a Unifideck game's size (when known), Achievements (when the game has any) and
  * HowLongToBeat's main story with the played share of it. `hltb` undefined: still loading ('…'); not found or
  * unavailable: '—' without a bar. Pure.
  */

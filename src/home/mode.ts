@@ -4,7 +4,7 @@ export interface HomeMode {
     gamePage: boolean;
     home: boolean;
     restyleDetails: boolean;
-    /** The Game Glance page's Clean look (one row at the bottom, no description or HowLongToBeat cards). */
+    /** The Native Home page's Clean look (one row at the bottom, no description or HowLongToBeat cards). */
     cleanDetails: boolean;
 }
 

@@ -54,6 +54,6 @@ export function hltbFoundView(times: HltbTimes, playedMinutes: number, locale: s
 /** The no-match card's two lines (the page's card and Home's copy as it opens): no matches, and where to fix it. Pure. */
 export function hltbNotFoundView(overrideId?: number): { muted: string; caption: string } {
     return overrideId !== undefined
-        ? { muted: `#${overrideId} · ${tr('noMatches')}`, caption: 'Check or remove the override in Quick Access → Game Glance' }
-        : { muted: tr('noMatches'), caption: 'Set the right game in Quick Access → Game Glance' };
+        ? { muted: `#${overrideId} · ${tr('noMatches')}`, caption: 'Check or remove the override in Quick Access → Native Home' }
+        : { muted: tr('noMatches'), caption: 'Set the right game in Quick Access → Native Home' };
 }

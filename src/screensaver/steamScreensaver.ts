@@ -83,7 +83,7 @@ export function slideshowClasses(): SlideshowClasses {
 }
 
 /**
- * Whether Game Glance can draw the screensaver here: Steam's Screensaver service is there (it tells when the screensaver
+ * Whether Native Home can draw the screensaver here: Steam's Screensaver service is there (it tells when the screensaver
  * turns on) and so is the slideshow's container class (the window is found from it). An older Steam client has neither;
  * a later one may rename them. Quick Access then shows a note instead of the switches. Pure.
  */

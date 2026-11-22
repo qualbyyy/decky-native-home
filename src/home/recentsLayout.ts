@@ -167,7 +167,7 @@ export function recentsLayout(count: number, focused: number, geometry: RecentsG
     return { items, scrollX: 0 - f * step, ghostStart, ghosts };
 }
 
-/** How Home's games row moves (Quick Access → Games row style): Steam's own Home, or Game Glance's Spotlight. */
+/** How Home's games row moves (Quick Access → Games row style): Steam's own Home, or Native Home's Spotlight. */
 export const ROW_STYLES = ['steam', 'spotlight'] as const;
 export type RowStyle = (typeof ROW_STYLES)[number];
 

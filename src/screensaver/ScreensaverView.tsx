@@ -195,7 +195,7 @@ function ScreensaverView({ doc, options }: { doc: Document; options: Screensaver
 
 /**
  * Always mounted (a Decky global component in Big Picture's window): while Steam's screensaver is on and the Screensaver
- * setting is on, draws Game Glance's slideshow over Steam's in the screensaver's window. Steam's Bouncing Logo (a web
+ * setting is on, draws Native Home's slideshow over Steam's in the screensaver's window. Steam's Bouncing Logo (a web
  * page, no slideshow window) is left alone.
  */
 export function ScreensaverHost() {

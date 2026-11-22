@@ -1,6 +1,6 @@
 
 /**
- * Game Glance's screensaver: its timings, its canvas and its stylesheet. Pure. Steam's Game Slideshow (probed on the
+ * Native Home's screensaver: its timings, its canvas and its stylesheet. Pure. Steam's Game Slideshow (probed on the
  * Ally, 2026-10-16) shows a slide for 20 s, crossfades over 2 s, drifts the art over 30 s (scale 1.035) and draws it in
  * a frame 100vw x 80vh with black bars; ours keeps the timings and drift, with Home's games, art and logo, the art filling
  * the whole screen.

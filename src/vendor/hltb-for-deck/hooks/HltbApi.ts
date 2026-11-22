@@ -638,7 +638,7 @@ async function fetchGamePageDataWithKey(gameId: number, apiKey: string) {
         `https://howlongtobeat.com/_next/data/${apiKey}/game/${gameId}.json`,
         {
             method: 'GET',
-            // game-glance local patch: HLTB returns 403 here without a browser User-Agent (2026-10-02).
+            // native-home local patch: HLTB returns 403 here without a browser User-Agent (2026-10-02).
             headers: getBaseHeaders(),
         }
     );
