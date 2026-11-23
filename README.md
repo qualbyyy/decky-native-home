@@ -12,4 +12,3 @@ This plugin is based on the codebase of [Game Glance](https://github.com/michpal
 - Single Play / Install / Resume button with matching-height Playtime and HLTB chips
 - Minimalist vertical title list mode (left/right, optional hidden logo/action panel)
 - Built-in theme-adapted Game View with morph transition
-- Russian settings UI
