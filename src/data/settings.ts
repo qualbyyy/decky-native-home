@@ -7,8 +7,12 @@ import { readScreensaverOptions, SCREENSAVER_DEFAULTS, ScreensaverOptions } from
 export type HomeLayout = 'carousel' | 'minimal';
 export type MinimalSide = 'left' | 'right';
 export type PluginLanguage = 'en' | 'ru';
+export type GamePageLayout = 'auto' | 'full' | 'minimal';
+export type LibraryLayout = 'auto' | 'grid' | 'minimal';
+export type LibraryGridSize = 'compact' | 'standard' | 'large';
 
 export interface Settings {
+    settingsVersion: number;
     language: PluginLanguage;
     enabled: boolean;
     autoPreload: boolean; // pre-load game data for installed games in the background
@@ -16,12 +20,18 @@ export interface Settings {
     homeLayout: HomeLayout;
     minimalSide: MinimalSide;
     minimalShowDetails: boolean;
+    gamePageLayout: GamePageLayout;
+    customLibrary: boolean;
+    libraryLayout: LibraryLayout;
+    libraryGridColumns: number;
+    libraryGridSize: LibraryGridSize;
     showPlaytime: boolean;
     showHltb: boolean;
     wishlistDeals: boolean; // look up wishlist sales on Steam's public store
-    cleanPage: boolean; // the Native Home page's Clean look: one row at the bottom, no description or HowLongToBeat cards
+    cleanPage: boolean; // legacy compatibility flag synced with gamePageLayout
     homeStatusBar: boolean; // Spotlight Home's status bar: clock, battery and connection in Steam's top strip
     hideStatusBarBackground: boolean; // hide the glass background behind the custom status bar
+    customMenus: boolean; // restyle Steam main menu, Quick Access Menu, and context menus
     statusAvatar: boolean; // your avatar, round and ringed in your status colour, in the status bar instead of the dot
     hideGameCover: boolean; // hide the game's cover art on the game page
     gameLogo: boolean; // the game's logo instead of its name on Home and the game page (the name when it has none)
@@ -34,7 +44,55 @@ export interface Settings {
 }
 
 const KEY = 'native_home_settings';
-const DEFAULTS: Settings = { language: 'en', enabled: true, autoPreload: true, spotlightHome: true, homeLayout: 'carousel', minimalSide: 'left', minimalShowDetails: true, showPlaytime: true, showHltb: true, wishlistDeals: false, cleanPage: false, homeStatusBar: false, hideStatusBarBackground: true, statusAvatar: false, hideGameCover: false, gameLogo: true, showNewLabel: true, showLastPlayedLabel: true, homeRow: RECENT_ROW, homeRowSort: 'lastPlayed', homeRowStyle: 'steam', screensaver: SCREENSAVER_DEFAULTS };
+export const CURRENT_SETTINGS_VERSION = 2;
+const DEFAULTS: Settings = {
+    settingsVersion: CURRENT_SETTINGS_VERSION,
+    language: 'en',
+    enabled: true,
+    autoPreload: true,
+    spotlightHome: true,
+    homeLayout: 'minimal',
+    minimalSide: 'left',
+    minimalShowDetails: false,
+    gamePageLayout: 'auto',
+    customLibrary: true,
+    libraryLayout: 'auto',
+    libraryGridColumns: 6,
+    libraryGridSize: 'standard',
+    showPlaytime: true,
+    showHltb: true,
+    wishlistDeals: false,
+    cleanPage: false,
+    homeStatusBar: false,
+    hideStatusBarBackground: true,
+    customMenus: true,
+    statusAvatar: false,
+    hideGameCover: false,
+    gameLogo: true,
+    showNewLabel: true,
+    showLastPlayedLabel: true,
+    homeRow: RECENT_ROW,
+    homeRowSort: 'lastPlayed',
+    homeRowStyle: 'steam',
+    screensaver: SCREENSAVER_DEFAULTS,
+};
+
+function gamePageLayoutOf(value: unknown, cleanPage: unknown): GamePageLayout {
+    if (value === 'auto' || value === 'full' || value === 'minimal') return value;
+    return cleanPage === true ? 'minimal' : DEFAULTS.gamePageLayout;
+}
+
+function libraryLayoutOf(value: unknown): LibraryLayout {
+    return value === 'auto' || value === 'grid' || value === 'minimal' ? value : DEFAULTS.libraryLayout;
+}
+
+function libraryGridColumnsOf(value: unknown): number {
+    return typeof value === 'number' && Number.isInteger(value) && value >= 4 && value <= 7 ? value : DEFAULTS.libraryGridColumns;
+}
+
+function libraryGridSizeOf(value: unknown): LibraryGridSize {
+    return value === 'compact' || value === 'standard' || value === 'large' ? value : DEFAULTS.libraryGridSize;
+}
 
 export function createSettingsStore(kv: KvBackend) {
     let current: Settings = { ...DEFAULTS };
@@ -45,20 +103,35 @@ export function createSettingsStore(kv: KvBackend) {
             const raw = (await kv.get(KEY)) as Partial<Settings> | null;
             const pick = <K extends keyof Settings>(key: K): Settings[K] =>
                 typeof raw?.[key] === 'boolean' ? (raw[key] as Settings[K]) : DEFAULTS[key];
+            const isLegacy = raw !== null && (typeof raw.settingsVersion !== 'number' || raw.settingsVersion < CURRENT_SETTINGS_VERSION);
+            const homeLayout: HomeLayout = isLegacy
+                ? DEFAULTS.homeLayout
+                : raw?.homeLayout === 'carousel' || raw?.homeLayout === 'minimal'
+                    ? raw.homeLayout
+                    : DEFAULTS.homeLayout;
+            const minimalShowDetails = isLegacy ? DEFAULTS.minimalShowDetails : pick('minimalShowDetails');
+            const gamePageLayout = gamePageLayoutOf(raw?.gamePageLayout, raw?.cleanPage);
             current = {
+                settingsVersion: CURRENT_SETTINGS_VERSION,
                 language: raw?.language === 'ru' ? 'ru' : 'en',
                 enabled: pick('enabled'),
                 autoPreload: pick('autoPreload'),
                 spotlightHome: pick('spotlightHome'),
-                homeLayout: raw?.homeLayout === 'minimal' ? 'minimal' : 'carousel',
+                homeLayout,
                 minimalSide: raw?.minimalSide === 'right' ? 'right' : 'left',
-                minimalShowDetails: pick('minimalShowDetails'),
+                minimalShowDetails,
+                gamePageLayout,
+                customLibrary: pick('customLibrary'),
+                libraryLayout: libraryLayoutOf(raw?.libraryLayout),
+                libraryGridColumns: libraryGridColumnsOf(raw?.libraryGridColumns),
+                libraryGridSize: libraryGridSizeOf(raw?.libraryGridSize),
                 showPlaytime: pick('showPlaytime'),
                 showHltb: pick('showHltb'),
                 wishlistDeals: false,
-                cleanPage: pick('cleanPage'),
+                cleanPage: gamePageLayout === 'minimal',
                 homeStatusBar: false,
                 hideStatusBarBackground: raw?.hideStatusBarBackground !== false,
+                customMenus: raw?.customMenus !== false,
                 statusAvatar: false,
                 hideGameCover: pick('hideGameCover'),
                 gameLogo: pick('gameLogo'),
@@ -70,6 +143,7 @@ export function createSettingsStore(kv: KvBackend) {
                 screensaver: readScreensaverOptions(raw?.screensaver),
             };
             emit();
+            if (isLegacy) void kv.set(KEY, current).catch(() => undefined);
         },
         get: (): Settings => current,
         async setLanguage(language: PluginLanguage): Promise<void> {
@@ -89,6 +163,31 @@ export function createSettingsStore(kv: KvBackend) {
         },
         async setMinimalSide(minimalSide: MinimalSide): Promise<void> {
             current = { ...current, minimalSide };
+            emit();
+            await kv.set(KEY, current);
+        },
+        async setGamePageLayout(gamePageLayout: GamePageLayout): Promise<void> {
+            current = { ...current, gamePageLayout, cleanPage: gamePageLayout === 'minimal' };
+            emit();
+            await kv.set(KEY, current);
+        },
+        async setCustomLibrary(customLibrary: boolean): Promise<void> {
+            current = { ...current, customLibrary };
+            emit();
+            await kv.set(KEY, current);
+        },
+        async setLibraryLayout(libraryLayout: LibraryLayout): Promise<void> {
+            current = { ...current, libraryLayout };
+            emit();
+            await kv.set(KEY, current);
+        },
+        async setLibraryGridColumns(libraryGridColumns: number): Promise<void> {
+            current = { ...current, libraryGridColumns: libraryGridColumnsOf(libraryGridColumns) };
+            emit();
+            await kv.set(KEY, current);
+        },
+        async setLibraryGridSize(libraryGridSize: LibraryGridSize): Promise<void> {
+            current = { ...current, libraryGridSize: libraryGridSizeOf(libraryGridSize) };
             emit();
             await kv.set(KEY, current);
         },
@@ -114,6 +213,11 @@ export function createSettingsStore(kv: KvBackend) {
         },
         async setHideStatusBarBackground(hideStatusBarBackground: boolean): Promise<void> {
             current = { ...current, hideStatusBarBackground };
+            emit();
+            await kv.set(KEY, current);
+        },
+        async setCustomMenus(customMenus: boolean): Promise<void> {
+            current = { ...current, customMenus };
             emit();
             await kv.set(KEY, current);
         },

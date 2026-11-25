@@ -20,6 +20,7 @@ export interface ThemeClasses {
     shared?: ClassMap; // the Play section's family library line module: Row, SharedLibrary
     transition?: ClassMap; // Steam's top-level page transition module: TopLevelTransition, Enter, EnterActive (its page-enter fade)
     footer?: ClassMap; // Steam's footer module: BasicFooter, FooterLegend (the button legend along the bottom of every page)
+    feedback?: ClassMap; // Steam Deck compatibility feedback banner inside AppDetailsOverviewPanel
 }
 
 function cls(map: ClassMap, key: string): string | null {
@@ -210,8 +211,10 @@ export function buildRingCss(boost: number): string {
 const ring = (alpha: number) => `rgba(255, 255, 255, calc(${alpha} * var(--gg-ring, 1)))`;
 
 export interface ThemeOptions {
-    /** Spotlight Home's look (both toggles on, homeMode().restyleDetails): only appends rules to the 1.1.1 theme. */
+    /** Native Home's restyled game view (homeMode().restyleDetails). */
     restyle?: boolean;
+    /** Minimalist GameView: compact Play row + flat unboxed typographic metadata line, no bottom dock. */
+    minimal?: boolean;
     /** Hide Steam's game cover art while keeping the page controls and our details visible. */
     hideCover?: boolean;
     /** Remove Steam's native top-bar background while keeping the status icons and QAM intact. */
@@ -285,7 +288,7 @@ export function buildThemeCss(classes: ThemeClasses, options: ThemeOptions = {})
         `.gg-hero { position: relative; margin: 1vh var(--gg-side); font-family: inherit; color: #fff; }`,
         `.gg-cards { display: flex; gap: ${u(14)}; align-items: stretch; }`,
         `.gg-card { flex: 1 1 0; min-width: 0; background: var(--gg-glass); border: 1px solid var(--gg-border);
-            border-radius: ${u(10)}; padding: ${u(9)} ${u(12)}; backdrop-filter: blur(${u(10)}); }`,
+            border-radius: 0; padding: ${u(9)} ${u(12)}; backdrop-filter: blur(${u(10)}); }`,
         `.gg-card.gg-hltb { flex: 0.95 1 0; }`,
         `.gg-label { font-size: ${u(8.5)}; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gg-muted); white-space: nowrap; }`,
         `.gg-value { font-size: ${u(17)}; font-weight: 700; white-space: nowrap; }`,
@@ -294,12 +297,12 @@ export function buildThemeCss(classes: ThemeClasses, options: ThemeOptions = {})
         `.gg-desc { margin: ${u(6)} 0 0; font-size: ${u(10.5)}; line-height: 1.4; color: rgba(255, 255, 255, 0.85);
             display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }`,
         `.gg-muted { margin-top: ${u(8)}; font-size: ${u(10)}; color: var(--gg-muted); }`,
-        `.gg-bar { margin-top: ${u(8)}; height: ${u(4)}; border-radius: ${u(2)}; background: rgba(255, 255, 255, 0.14); overflow: hidden; }`,
-        `.gg-bar > div { height: 100%; border-radius: ${u(2)}; background: var(--gg-accent); }`,
+        `.gg-bar { margin-top: ${u(8)}; height: ${u(4)}; border-radius: 0; background: rgba(255, 255, 255, 0.14); overflow: hidden; }`,
+        `.gg-bar > div { height: 100%; border-radius: 0; background: var(--gg-accent); }`,
         `.gg-caption { margin-top: ${u(5)}; font-size: ${u(10)}; color: var(--gg-muted); }`,
-        `.gg-skeleton { display: inline-block; width: 3.2em; height: 1em; border-radius: ${u(4)}; background: rgba(255, 255, 255, 0.12); }`,
+        `.gg-skeleton { display: inline-block; width: 3.2em; height: 1em; border-radius: 0; background: rgba(255, 255, 255, 0.12); }`,
         `.gg-pill { position: absolute; right: 0; top: calc(-1 * ${u(60)}); height: ${u(24)}; display: inline-flex; align-items: center; padding: 0 ${u(10)};
-            border-radius: 999px; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.2); font-size: ${u(11)}; }`,
+            border-radius: 0; background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(255, 255, 255, 0.2); font-size: ${u(11)}; }`,
         `.gg-pill-icon { flex: 0 0 auto; width: ${u(12)}; height: ${u(12)}; margin-right: ${u(6)}; }`,
         `.gg-more { position: absolute; left: 50%; bottom: ${u(44)}; transform: translateX(-50%); font-size: ${u(20)}; line-height: 1; opacity: 0.35; pointer-events: none; }`,
 
@@ -308,24 +311,25 @@ export function buildThemeCss(classes: ThemeClasses, options: ThemeOptions = {})
         // Hide Steam's native Family Sharing row unconditionally.
         rule(sharedCls, ` display: none !important; `),
 
-        // Play row: pill Play button, round icon buttons, room for the cloud icon.
+        // Play row: square Play button, square icon buttons, room for the cloud icon.
         rule(actionRow, ` justify-content: flex-start !important; align-items: flex-start !important; gap: var(--gg-gap) !important; `),
         rule(playButton, ` width: var(--gg-play-w) !important; flex: 0 0 var(--gg-play-w) !important; `),
-        // Play is one pill; games with a "Play from" arrow (local vs. streaming) get it as a segment inside the pill.
+        // Play is one square button; games with a "Play from" arrow (local vs. streaming) get it as a segment inside the button.
         rule(playButton && `${playButton} > div:has(> [role="button"])`, ` display: flex !important; width: 100% !important; height: var(--gg-icon) !important;
-            border-radius: 999px !important; overflow: hidden !important; background: var(--gg-accent) !important; box-shadow: none !important; `),
-        rule(playButton && `${playButton} [role="button"]`, ` background: transparent !important; border-radius: 0 !important; width: auto !important;
-            flex: 1 1 auto !important; min-width: 0 !important; min-height: 0 !important; height: 100% !important; color: #ffffff !important;
+            border-radius: 0 !important; outline: none !important; overflow: hidden !important; background: var(--gg-accent) !important; box-shadow: none !important; `),
+        rule(playButton && `${playButton} [role="button"]`, ` background: transparent !important; border-radius: 0 !important; outline: none !important; width: auto !important;
+            flex: 1 1 auto !important; min-width: 0 !important; min-height: 0 !important; height: 100% !important; overflow: hidden !important;
+            white-space: nowrap !important; text-overflow: ellipsis !important; color: #ffffff !important;
             font-size: ${u(16)} !important; padding: ${u(8)} ${u(16)} !important; `),
         rule(playButton && `${playButton} [role="button"] > div`, ` font-size: ${u(16)} !important; `),
         rule(playButton && `${playButton} [role="button"] + [role="button"]`, ` flex: 0 0 ${u(38)} !important; width: ${u(38)} !important; padding: 0 !important;
             display: flex !important; align-items: center !important; justify-content: center !important; border-left: 1px solid rgba(4, 17, 12, 0.25) !important; `),
-        rule(playButton && `${NOT_MOUSE} ${playButton} [role="button"].gpfocus`, ` background: rgba(255, 255, 255, 0.28) !important; `),
+        rule(playButton && `${NOT_MOUSE} ${playButton} [role="button"].gpfocus`, ` background: rgba(255, 255, 255, 0.28) !important; outline: none !important; `),
         rule(appButtons, ` margin-left: 0 !important; gap: var(--gg-gap) !important; `),
         rule(appButtons && `${appButtons} > *`, ` margin: 0 !important; padding: 0 !important; `),
-        rule(menuButton, ` width: var(--gg-icon) !important; height: var(--gg-icon) !important; min-width: 0 !important; margin: 0 !important; box-sizing: border-box !important; border-radius: 50% !important;
+        rule(menuButton, ` width: var(--gg-icon) !important; height: var(--gg-icon) !important; min-width: 0 !important; margin: 0 !important; box-sizing: border-box !important; border-radius: 0 !important; outline: none !important;
             background: rgba(255, 255, 255, 0.08) !important; border: 1px solid rgba(255, 255, 255, 0.18) !important; `),
-        rule(menuButton && `${NOT_MOUSE} ${menuButton}.gpfocus`, ` background: #ffffff !important; color: #0b0f14 !important; `),
+        rule(menuButton && `${NOT_MOUSE} ${menuButton}.gpfocus`, ` background: #ffffff !important; color: #0b0f14 !important; outline: none !important; border-radius: 0 !important; `),
         // Steam's own icons and row padding, scaled like the rest (Steam sizes them in fixed pixels).
         rule(playButton && menuButton && [`${playButton} svg`, `${menuButton} svg`], ` width: ${u(24)} !important; height: ${u(24)} !important; `),
         rule(playButton && `${playButton} [role="button"] svg`, ` margin-right: ${u(16)} !important; `),
@@ -337,7 +341,7 @@ export function buildThemeCss(classes: ThemeClasses, options: ThemeOptions = {})
         rule(cloud, ` position: absolute !important; top: ${u(16)} !important;
             left: calc(var(--gg-side) + var(--gg-play-w) + var(--gg-gap) + var(--gg-buttons, 2) * (var(--gg-icon) + var(--gg-gap))) !important;
             width: var(--gg-icon) !important; height: var(--gg-icon) !important; padding: 0 !important; margin: 0 !important; box-sizing: border-box !important;
-            display: flex; align-items: center; justify-content: center; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; border-radius: 0; outline: none;
             background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.18); color: var(--gg-ok) !important; `),
         ...[1, 2, 3, 4, 5].map((n) =>
             rule(playSection && appButtons && cloud && `${playSection}:has(${appButtons} > :nth-child(${n}):last-child) ~ ${cloud}`, ` --gg-buttons: ${n}; `),
@@ -408,7 +412,7 @@ export function buildThemeCss(classes: ThemeClasses, options: ThemeOptions = {})
                 margin: 0 !important; `),
         );
     }
-    if (options.restyle) rules.push(...restyleRules(classes, Boolean(layout)));
+    if (options.restyle) rules.push(...restyleRules(classes, Boolean(layout), Boolean(options.minimal)));
     rules.push(`.gg-pill, .gg-family { display: none !important; }`);
     return rules.filter((r) => r.length > 0).join('\n');
 }
@@ -459,25 +463,24 @@ export function buildUnifideckCss({ header, details, root }: ThemeClasses, optio
         hideMeta,
         ...circleOrder,
         rule(`${inner}${UNIFIDECK_PAGE} > div:has(${UNIFIDECK_PRIMARY.join(', ')})`, ` position: absolute !important; top: var(--gg-play-top) !important;
-            left: 0 !important; right: 0 !important; width: auto !important; z-index: 2 !important; box-sizing: border-box !important;
-            padding: ${u(16)} var(--gg-side) !important; gap: var(--gg-gap) !important; background: transparent !important; `),
-        rule(primary, ` width: var(--gg-play-w) !important; min-width: 0 !important; flex: 0 0 var(--gg-play-w) !important; height: var(--gg-icon) !important;
-            justify-content: center !important; border-radius: 999px !important; background: var(--gg-accent) !important; box-shadow: none !important;
-            color: #ffffff !important; font-size: ${u(16)} !important; `),
-        rule(focused, ` background: var(--gg-accent) !important; box-shadow: 0 0 0 ${u(2)} rgba(255, 255, 255, 0.9) !important; `),
-        // Spotlight Home's look: Steam's Play row has no top padding and a 36 one below (see the playSection rule above), so the buttons start
-        // at --gg-play-top; the same here, or Unifideck's pill sits lower than Steam's.
-        options.restyle ? rule(`${inner}${UNIFIDECK_PAGE} > div:has(${UNIFIDECK_PRIMARY.join(', ')})`, ` padding-top: 0 !important; padding-bottom: ${d(36)} !important; `) : '',
-        // And the handoff's pill type, white on the accent and focused as our own Play pill (ring, glow, focus scale).
-        options.restyle ? rule(primary, ` font-size: ${d(22)} !important; font-weight: 700 !important; color: #ffffff !important; transition: transform 250ms, box-shadow 250ms !important; `) : '',
-        // Read and laid out as Home's pill and Steam's (consistent on Home and every page): the word as written, not in
-        // Unifideck's capitals, and glyph and word from the left at the page pill's inset, glyph size and gap.
-        // (Unifideck's inline 0.05em letter spacing too: it drew the word wider than Home's, which stepped at the open's hand-over.)
-        options.restyle ? rule(primary, ` text-transform: none !important; letter-spacing: normal !important; justify-content: flex-start !important; gap: 0 !important; padding: 0 ${d(PAGE_LAYOUT.pill.padX)} !important; `) : '',
-        // Its cloud button's in-sync check badge at Unifideck's proportion to the 24 glyph (the circles' rule sizes every svg 24).
+            left: 0 !important; right: 0 !important; width: auto !important; z-index: 5 !important; box-sizing: border-box !important;
+            display: flex !important; align-items: flex-start !important; flex-wrap: nowrap !important;
+            pointer-events: auto !important; overflow: visible !important; padding: ${u(16)} var(--gg-side) !important; gap: var(--gg-gap) !important; background: transparent !important; `),
+        rule(`${inner}${UNIFIDECK_PAGE} > div:has(${UNIFIDECK_PRIMARY.join(', ')}) > *`, ` align-self: flex-start !important; margin-top: 0 !important; margin-bottom: 0 !important; `),
+        rule(`${UNIFIDECK_PAGE} .unifideck-icon-btn`, ` position: relative !important; z-index: 6 !important; pointer-events: auto !important; display: flex !important; align-items: center !important; justify-content: center !important;
+            align-self: flex-start !important; flex: 0 0 var(--gg-icon) !important; width: var(--gg-icon) !important; height: var(--gg-icon) !important; min-width: 0 !important; min-height: 0 !important; margin: 0 !important; `),
+        rule(primary, ` width: var(--gg-play-w) !important; min-width: 0 !important; max-width: var(--gg-play-w) !important; flex: 0 0 var(--gg-play-w) !important; height: var(--gg-icon) !important;
+            display: flex !important; align-items: center !important; box-sizing: border-box !important; overflow: hidden !important; white-space: nowrap !important; text-overflow: ellipsis !important;
+            justify-content: center !important; border-radius: 0 !important; outline: none !important; background: var(--gg-accent) !important; box-shadow: none !important;
+            color: var(--ctp-crust, #0b0f14) !important; font-size: ${u(16)} !important; `),
+        rule(primary.flatMap((p) => [`${p}::before`, `${p}::after`]), ` border-radius: 0 !important; outline: none !important; `),
+        rule(focused, ` background: var(--gg-accent) !important; border-radius: 0 !important; outline: none !important; box-shadow: 0 0 0 ${u(2)} var(--ctp-accent-color, rgba(255, 255, 255, 0.9)) !important; `),
+        options.restyle ? rule(`${inner}${UNIFIDECK_PAGE} > div:has(${UNIFIDECK_PRIMARY.join(', ')})`, ` padding-top: 0 !important; padding-bottom: ${d(options.minimal ? 16 : 20)} !important; `) : '',
+        options.restyle ? rule(primary, ` font-size: ${d(options.minimal ? 17 : 19)} !important; font-weight: 700 !important; color: var(--ctp-crust, #0b0f14) !important; transition: transform 200ms, box-shadow 200ms !important; `) : '',
+        options.restyle ? rule(primary, ` text-transform: none !important; letter-spacing: normal !important; justify-content: flex-start !important; gap: 0 !important; padding: 0 ${d(options.minimal ? 16 : 20)} !important; `) : '',
         options.restyle ? rule('.unifideck-icon-btn svg.unifideck-cloud-badge', ` width: ${d(13)} !important; height: ${d(13)} !important; `) : '',
-        options.restyle ? rule(primary.map((p) => `${p} svg`), ` width: ${d(PAGE_LAYOUT.pill.icon)} !important; height: ${d(PAGE_LAYOUT.pill.icon)} !important; margin: 0 ${d(PAGE_LAYOUT.pill.iconGap)} 0 0 !important; flex: 0 0 auto !important; `) : '',
-        options.restyle ? rule(focused, ` box-shadow: 0 0 0 ${d(2)} rgba(255, 255, 255, 0.9), 0 ${d(14)} ${d(40)} calc(-1 * ${d(8)}) var(--gg-accent) !important; transform: scale(${PILL_FOCUS.x}, ${PILL_FOCUS.y}) !important; `) : '',
+        options.restyle ? rule(primary.map((p) => `${p} svg`), ` width: ${d(options.minimal ? 17 : 18)} !important; height: ${d(options.minimal ? 17 : 18)} !important; margin: 0 ${d(12)} 0 0 !important; flex: 0 0 auto !important; `) : '',
+        options.restyle ? rule(focused, ` box-shadow: 0 0 0 ${d(2)} var(--ctp-accent-color, rgba(255, 255, 255, 0.9)), 0 ${d(10)} ${d(28)} calc(-1 * ${d(6)}) var(--gg-accent) !important; transform: scale(${PILL_FOCUS.x}, ${PILL_FOCUS.y}) !important; `) : '',
     ].filter((r) => r.length > 0).join('\n');
 }
 
@@ -524,7 +527,7 @@ export function buildCleanCss({ header, details, root }: ThemeClasses): string {
         `.gg-clean-info { position: absolute; right: 0; top: 50%; transform: translateY(-50%); display: flex; align-items: stretch; gap: ${d(PAGE_LAYOUT.cleanInfo.colGap)};
             padding: 0; border: 0; background: transparent; backdrop-filter: none; color: var(--ctp-text, #fff); }`,
         `.gg-clean-info > div { display: flex; flex-direction: column; gap: ${d(PAGE_LAYOUT.stats.rowGap)}; padding: ${d(PAGE_LAYOUT.cleanInfo.padY)} ${d(PAGE_LAYOUT.cleanInfo.padX)};
-            border: ${d(1)} solid var(--ctp-surface2, ${ring(0.14)}); border-radius: var(--gruvbox-radius, ${d(8)}); background: var(--ctp-surface0, rgba(20, 28, 38, 0.85)); }`,
+            border: ${d(1)} solid var(--ctp-surface2, ${ring(0.14)}); border-radius: 0; background: var(--ctp-surface0, rgba(20, 28, 38, 0.85)); }`,
         `.gg-clean-info .gg-value { ${pageType('cleanValue', d)} }`,
         `.gg-clean-info .gg-bar { width: ${d(PAGE_LAYOUT.cleanInfo.barW)}; height: ${d(PAGE_LAYOUT.cleanInfo.barH)}; margin-top: ${d(PAGE_LAYOUT.cleanInfo.barTop)}; }`,
         // The store pill above the row, at its right edge.
@@ -618,16 +621,19 @@ export function buildLaunchCss(classes: ThemeClasses): string {
 }
 
 /**
- * Spotlight Home's details look (handoff "2. Native Home (details)"), appended after the 1.1.1 rules so they win
- * without touching them. Same defensive pattern: a rule needing a Steam class that is missing is skipped. On Steam's
- * elements it only sets colours, the focus glow, the scrim, the logo's visibility (its box stays in place) and the
- * Play row's side padding (the handoff's 56 px insets); everything else styles our own `.gg-*` elements.
- * The eyebrow/title block is shown only with the full-screen layout, where the logo was; otherwise (a renamed Steam
- * class) it stays hidden and Steam's logo is left alone, so the page never shows two titles.
+ * Native Home's original GameView styling (Full architectural dock & Minimalist unboxed view).
+ * Uses Deck-native squircle geometry (`--gruvbox-radius, 8px`), theme-native `--ctp-*` tokens,
+ * and zero Game Glance dual-floating-card pills.
  */
-function restyleRules({ header, details, root, play, shared }: ThemeClasses, layout: boolean): string[] {
-    // Play focused: theme accent ring + scale
-    const pillFocused = ` box-shadow: 0 0 0 ${d(2)} var(--ctp-accent-color, rgba(255, 255, 255, 0.9)) !important; transform: scale(${PILL_FOCUS.x}, ${PILL_FOCUS.y}) !important; `;
+function restyleRules({ header, details, root, play, shared, feedback }: ThemeClasses, layout: boolean, minimal: boolean): string[] {
+    const playW = minimal ? 216 : 264;
+    const icon = minimal ? 46 : 52;
+    const gap = minimal ? 10 : 12;
+    const rowH = minimal ? 62 : 72;
+    const titleGap = minimal ? 20 : 24;
+    const btnRadius = '0px';
+    const playFocus = pillFocusScale(playW, icon);
+    const pillFocused = ` box-shadow: 0 0 0 ${d(2)} var(--ctp-accent-color, rgba(255, 255, 255, 0.92)) !important; transform: scale(${playFocus.x}, ${playFocus.y}) !important; `;
     const topCapsule = cls(header, 'TopCapsule');
     const titleImage = cls(header, 'TitleImageContainer');
     const svgTitle = cls(header, 'SVGTitle');
@@ -637,160 +643,161 @@ function restyleRules({ header, details, root, play, shared }: ThemeClasses, lay
     const menuButton = cls(play, 'MenuButton');
     const cloud = cls(play, 'CloudStatusRow');
     const cloudIcon = cls(play, 'CloudStatusIcon');
+    const feedbackScope = present([cls(details, 'AppDetailsOverviewPanel'), cls(root, 'AppDetailsRoot'), inner])[0];
+    const feedbackSelectors = present([
+        cls(feedback, 'DeckVerifiedFeedbackContainer') ?? cls(root, 'DeckVerifiedFeedbackContainer'),
+        cls(feedback, 'DeckVerifiedFeedbackDetailsCtn') ?? cls(root, 'DeckVerifiedFeedbackDetailsCtn'),
+        cls(feedback, 'DeckVerifiedFeedbackConfirmationContainer') ?? cls(root, 'DeckVerifiedFeedbackConfirmationContainer'),
+        feedbackScope && `${feedbackScope} [class*="DeckVerifiedFeedbackContainer"]`,
+        feedbackScope && `${feedbackScope} [class*="DeckVerifiedFeedbackConfirmationContainer"]`,
+    ]);
+
+    const utilityBg = minimal ? 'rgba(var(--ctp-base-rgb, 14, 20, 27), 0.46)' : 'var(--ctp-surface0, rgba(20, 28, 38, 0.88))';
+    const utilityBorder = minimal ? 'rgba(255, 255, 255, 0.16)' : 'var(--ctp-surface2, rgba(255, 255, 255, 0.16))';
+    const minScrim = `linear-gradient(0deg, rgba(var(--ctp-base-rgb, 8, 11, 15), 0.92) 0%, rgba(var(--ctp-base-rgb, 8, 11, 15), 0.42) 34%, transparent 62%), linear-gradient(180deg, rgba(var(--ctp-base-rgb, 8, 11, 15), 0.38) 0px, transparent 72px)`;
+    const fullScrim = `linear-gradient(90deg, rgba(var(--ctp-base-rgb, 5, 7, 10), 0.62) 0%, rgba(var(--ctp-base-rgb, 5, 7, 10), 0.14) 52%, transparent 76%), linear-gradient(0deg, rgba(var(--ctp-base-rgb, 8, 11, 15), 0.95) 0%, rgba(var(--ctp-base-rgb, 8, 11, 15), 0.65) 36%, transparent 64%)`;
 
     const rules: string[] = [
-        // Steam's thin download bar under the Play pill is never shown (the pill itself fills, buildDownloadCss), so it
-        // cannot flash before the progress is known.
+        feedbackSelectors.length ? rule(feedbackSelectors, ` display: none !important; `) : '',
         rule(playButton && `${playButton} [role="progressbar"]`, ` display: none !important; `),
-        // The game's accent / CSS Loader theme accent becomes the theme's accent
         `@property --glance-accent { syntax: '<color>'; inherits: true; initial-value: ${DEFAULT_ACCENT}; }`,
         `:root { --gg-d: min(calc(100vw / ${PAGE_LAYOUT.canvas.wide}), calc(100vh / ${PAGE_LAYOUT.canvas.wideHeight})); }`,
         `@media (max-aspect-ratio: 17/10) { :root { --gg-d: min(calc(100vw / ${PAGE_LAYOUT.canvas.deck}), calc(100vh / ${PAGE_LAYOUT.canvas.deckHeight})); } }`,
         rule(inner, ` --gg-accent: var(--ctp-accent-color, var(--glance-accent, #1a9fff)); transition: --glance-accent ${ACCENT_MS}ms ease; `),
 
-        // Side insets 56: Steam's Play row (2.8vw of its own) and everything placed by --gg-side move together,
-        // so the cloud icon's position (counted from --gg-side) stays right.
         playSection ? `:root { --gg-side: ${d(PAGE_LAYOUT.side.base)}; }` : '',
-        // A TV (screenScale.isTvScreen: 1.7x the handheld's 828x466 or more: 1408 x 793) takes the status dot's centre line (1.7vw, 24 canvas px) instead of 3.9vw:
-        // 56 read too far from the edge on a big screen. The handheld and the Deck keep 56. (Home does the same: home/insets.)
         playSection ? `${TV_QUERY} { :root { --gg-side: ${d(PAGE_LAYOUT.side.tv)}; } }` : '',
         rule(playSection, ` padding-left: var(--gg-side) !important; padding-right: var(--gg-side) !important; `),
 
-        // Handoff sizes (Play pill 340x60, 60px circles, gap 14), scaled like Home's. They feed the 1.1.1 rules
-        // (Play button width, buttons, the cloud icon's position), which keep working unchanged.
-        `:root { --gg-play-w: ${d(PAGE_LAYOUT.playW)}; --gg-icon: ${d(PAGE_LAYOUT.icon)}; --gg-gap: ${d(PAGE_LAYOUT.gap)}; }`,
-        // The row sits on a 36 gap above the cards: Play row top = H - 386, cards top = H - 290 (handoff).
-        rule(playSection, ` padding-top: 0 !important; padding-bottom: ${d(PAGE_LAYOUT.rowH - PAGE_LAYOUT.icon)} !important; `),
+        `:root { --gg-play-w: ${d(playW)}; --gg-icon: ${d(icon)}; --gg-gap: ${d(gap)}; }`,
+        rule(playSection, ` padding-top: 0 !important; padding-bottom: ${d(rowH - icon)} !important; `),
         rule(cloud, ` top: 0 !important; `),
-        // Steam gives the pill group a fixed min-width in px (164, and 218 for games with a "Play from" arrow), which would
-        // push the arrow segment past the slot into the circles. The group is exactly the slot; the arrow sits inside its right end.
-        rule(playButton && `${playButton} > div:has(> [role="button"])`, ` min-width: 0 !important; border-radius: var(--gruvbox-radius, 999px) !important; `),
-        rule(playButton && `${playButton} [role="button"]`, ` font-size: ${d(PAGE_LAYOUT.pill.font)} !important; font-weight: 700 !important; padding: ${d(8)} ${d(PAGE_LAYOUT.pill.padX)} !important; `),
-        // The label bold like Home's (Steam's own class sets 500), so nothing changes at the open transition's hand-over.
-        rule(playButton && `${playButton} [role="button"] > div`, ` ${pageType('playLabel', d, true)} color: var(--ctp-crust, #ffffff) !important; `),
-        rule(playButton && `${playButton} [role="button"] svg`, ` width: ${d(PAGE_LAYOUT.pill.icon)} !important; height: ${d(PAGE_LAYOUT.pill.icon)} !important; margin-right: ${d(PAGE_LAYOUT.pill.iconGap)} !important; `),
-        rule(playButton && `${playButton} [role="button"] + [role="button"]`, ` flex: 0 0 ${d(PAGE_LAYOUT.playArrow.w)} !important; width: ${d(PAGE_LAYOUT.playArrow.w)} !important; padding: 0 !important; `),
-        rule(playButton && `${playButton} [role="button"] + [role="button"] svg`, ` width: ${d(PAGE_LAYOUT.playArrow.glyph)} !important; height: ${d(PAGE_LAYOUT.playArrow.glyph)} !important; `),
-        // Menu buttons adapted to CSS Loader theme
-        rule(menuButton, ` background: var(--ctp-surface0, rgba(20, 28, 38, 0.85)) !important; border-width: ${d(1)} !important; border-color: var(--ctp-surface2, rgba(255, 255, 255, 0.16)) !important; color: var(--ctp-text, #ffffff) !important; backdrop-filter: none !important; `),
-        rule(menuButton && `${NOT_MOUSE} ${menuButton}.gpfocus`, ` background: var(--ctp-accent-color, #ffffff) !important; color: var(--ctp-crust, #0b0f14) !important; `),
-        rule(menuButton && `${NOT_MOUSE} ${menuButton}:focus`, ` background: var(--ctp-accent-color, #ffffff) !important; color: var(--ctp-crust, #0b0f14) !important; `),
-        rule(menuButton && `${menuButton} svg`, ` width: ${d(PAGE_LAYOUT.circleIcon)} !important; height: ${d(PAGE_LAYOUT.circleIcon)} !important; `),
-        // Cloud button adapted to CSS Loader theme
-        rule(cloud, ` background: var(--ctp-surface0, rgba(20, 28, 38, 0.85)) !important; border: 1px solid var(--ctp-surface2, rgba(255, 255, 255, 0.16)) !important; color: var(--ctp-text, #ffffff) !important;
+        // Unified Deck-native square Play button
+        rule(playButton && `${playButton} > div:has(> [role="button"])`, ` min-width: 0 !important; border-radius: ${btnRadius} !important; outline: none !important; `),
+        rule(playButton && [`${playButton} > div::before`, `${playButton} > div::after`, `${playButton} [role="button"]::before`, `${playButton} [role="button"]::after`], ` border-radius: ${btnRadius} !important; outline: none !important; `),
+        rule(playButton && `${playButton} [role="button"]`, ` font-size: ${d(minimal ? 17 : 19)} !important; font-weight: 700 !important; padding: ${d(6)} ${d(minimal ? 16 : 20)} !important; border-radius: ${btnRadius} !important; outline: none !important; `),
+        rule(playButton && `${playButton} [role="button"] > div`, ` font-size: ${d(minimal ? 17 : 19)} !important; font-weight: 700 !important; color: var(--ctp-crust, #0b0f14) !important; `),
+        rule(playButton && `${playButton} [role="button"] svg`, ` width: ${d(minimal ? 17 : 18)} !important; height: ${d(minimal ? 17 : 18)} !important; margin-right: ${d(12)} !important; `),
+        rule(playButton && `${playButton} [role="button"] + [role="button"]`, ` flex: 0 0 ${d(minimal ? 44 : 48)} !important; width: ${d(minimal ? 44 : 48)} !important; padding: 0 !important; background: transparent !important; border-left: ${d(1)} solid rgba(0, 0, 0, 0.18) !important; color: var(--ctp-crust, #0b0f14) !important; `),
+        rule(playButton && `${playButton} [role="button"] + [role="button"] > *`, ` background: transparent !important; box-shadow: none !important; color: var(--ctp-crust, #0b0f14) !important; `),
+        rule(playButton && `${playButton} [role="button"] + [role="button"] svg`, ` width: ${d(13)} !important; height: ${d(13)} !important; color: var(--ctp-crust, #0b0f14) !important; `),
+        // Utility buttons (square, matching Play button radius)
+        rule(menuButton, ` border-radius: ${btnRadius} !important; outline: none !important; background: ${utilityBg} !important; border-width: ${d(1)} !important; border-color: ${utilityBorder} !important; color: var(--ctp-text, #ffffff) !important; backdrop-filter: none !important; `),
+        rule(menuButton && [`${menuButton}::before`, `${menuButton}::after`], ` border-radius: ${btnRadius} !important; outline: none !important; `),
+        rule(menuButton && `${NOT_MOUSE} ${menuButton}.gpfocus`, ` background: var(--ctp-accent-color, #ffffff) !important; border-color: var(--ctp-accent-color, #ffffff) !important; color: var(--ctp-crust, #0b0f14) !important; border-radius: ${btnRadius} !important; outline: none !important; `),
+        rule(menuButton && `${NOT_MOUSE} ${menuButton}:focus`, ` background: var(--ctp-accent-color, #ffffff) !important; border-color: var(--ctp-accent-color, #ffffff) !important; color: var(--ctp-crust, #0b0f14) !important; border-radius: ${btnRadius} !important; outline: none !important; `),
+        rule(menuButton && `${menuButton} svg`, ` width: ${d(minimal ? 20 : 22)} !important; height: ${d(minimal ? 20 : 22)} !important; `),
+        // Cloud status button (square, matching utility buttons)
+        rule(cloud, ` border-radius: ${btnRadius} !important; outline: none !important; background: ${utilityBg} !important; border: ${d(1)} solid ${utilityBorder} !important; color: var(--ctp-text, #ffffff) !important;
             backdrop-filter: none !important; box-shadow: none !important;
             --gg-ok: ${CLOUD_COLOURS.ok}; --gg-warn: ${CLOUD_COLOURS.busy}; --gg-bad: ${CLOUD_COLOURS.bad}; --gg-off: ${CLOUD_COLOURS.off}; `),
+        rule(cloud && [`${cloud}::before`, `${cloud}::after`], ` border-radius: ${btnRadius} !important; outline: none !important; `),
         rule(cloud && `${cloud} svg`, ` filter: drop-shadow(0 0 ${d(1.5)} rgba(0, 0, 0, 0.7)) !important; `),
-        rule(cloud && `${cloud} svg`, ` width: ${d(PAGE_LAYOUT.cloudIcon)} !important; height: ${d(PAGE_LAYOUT.cloudIcon)} !important; `),
-        rule(cloudIcon, ` height: ${d(PAGE_LAYOUT.cloudIcon)} !important; `),
-        rule(cloud && `${NOT_MOUSE} ${cloud}.gpfocus`, ` background: var(--ctp-accent-color, #ffffff) !important; color: ${CLOUD_FOCUS_BAD} !important; `),
-        rule(cloud && `${NOT_MOUSE} ${cloud}:focus`, ` background: var(--ctp-accent-color, #ffffff) !important; color: ${CLOUD_FOCUS_BAD} !important; `),
+        rule(cloud && `${cloud} svg`, ` width: ${d(minimal ? 22 : 24)} !important; height: ${d(minimal ? 22 : 24)} !important; `),
+        rule(cloudIcon, ` height: ${d(minimal ? 22 : 24)} !important; `),
+        rule(cloud && `${NOT_MOUSE} ${cloud}.gpfocus`, ` background: var(--ctp-accent-color, #ffffff) !important; border-color: var(--ctp-accent-color, #ffffff) !important; color: ${CLOUD_FOCUS_BAD} !important; border-radius: ${btnRadius} !important; outline: none !important; `),
+        rule(cloud && `${NOT_MOUSE} ${cloud}:focus`, ` background: var(--ctp-accent-color, #ffffff) !important; border-color: var(--ctp-accent-color, #ffffff) !important; color: ${CLOUD_FOCUS_BAD} !important; border-radius: ${btnRadius} !important; outline: none !important; `),
 
-        // Play: contrast words and glyph on the accent pill
-        rule(playButton && `${playButton} [role="button"]`, ` color: var(--ctp-crust, #ffffff) !important; `),
+        // Play focus / hover
+        rule(playButton && `${playButton} [role="button"]`, ` color: var(--ctp-crust, #0b0f14) !important; `),
         rule(playButton && `${NOT_MOUSE} ${playButton} [role="button"].gpfocus`, ` background: transparent !important; `),
         rule(playButton && `${NOT_MOUSE} ${playButton} [role="button"]:focus`, ` background: transparent !important; `),
-        // The "Play from" arrow focused: the pill shows its focus (below) and the arrow's segment is tinted, as on Home.
-        rule(playButton && `${NOT_MOUSE} ${playButton} [role="button"] + [role="button"].gpfocus`, ` background: rgba(255, 255, 255, 0.28) !important; `),
-        rule(playButton && `${NOT_MOUSE} ${playButton} [role="button"] + [role="button"]:focus`, ` background: rgba(255, 255, 255, 0.28) !important; `),
-        // Steam's focus shine on Play (a green gradient on its ::after) would show over the accent pill.
+        rule(playButton && `${NOT_MOUSE} ${playButton} [role="button"] + [role="button"].gpfocus`, ` background: rgba(0, 0, 0, 0.14) !important; `),
+        rule(playButton && `${NOT_MOUSE} ${playButton} [role="button"] + [role="button"]:focus`, ` background: rgba(0, 0, 0, 0.14) !important; `),
         rule(playButton && `${playButton} [role="button"]::after`, ` display: none !important; `),
-        rule(playButton && `${playButton} > div:has(> [role="button"])`, ` transition: transform 250ms, box-shadow 250ms !important; `),
+        rule(playButton && `${playButton} > div:has(> [role="button"])`, ` transition: transform 200ms, box-shadow 200ms !important; `),
         rule(playButton && `${NOT_MOUSE} ${playButton} > div:has(> [role="button"].gpfocus)`, pillFocused),
         rule(playButton && `${NOT_MOUSE} ${playButton} > div:has(> [role="button"]:focus)`, pillFocused),
-        // A mouse over anything clickable (home/mouseMode, never a finger or the controller): Home's hover ring, ring only, in
-        // d units, focused too: the focus looks are off in mouse mode (NOT_MOUSE). The pill with its "Play from" arrow takes it as one.
         rule(playButton && `${HOVER} ${playButton} > div:has(> [role="button"]):hover`, ` box-shadow: ${hoverRing(d(2))} !important; `),
         rule(menuButton && `${HOVER} ${menuButton}:hover`, ` box-shadow: ${hoverRing(d(2))} !important; `),
         rule(cloud && `${HOVER} ${cloud}:hover`, ` box-shadow: ${hoverRing(d(2))} !important; `),
-        rule(playButton && `${HOVER} ${playButton} [role="button"]:is(.gpfocus, :focus)`, ` background: transparent !important; color: var(--ctp-crust, #ffffff) !important; `),
+        rule(playButton && `${HOVER} ${playButton} [role="button"]:is(.gpfocus, :focus)`, ` background: transparent !important; color: var(--ctp-crust, #0b0f14) !important; `),
         rule(menuButton && `${HOVER} ${menuButton}:is(.gpfocus, :focus)`, ` color: var(--ctp-text, #ffffff) !important; `),
         rule(menuButton && `${HOVER} ${menuButton}:is(.gpfocus, :focus) svg`, ` color: var(--ctp-text, #ffffff) !important; `),
 
-        // Eyebrow and title adapted to theme
-        `.gg-titleblock { display: none; flex-direction: column; gap: ${d(PAGE_LAYOUT.titleBlock.gap)}; max-width: ${d(640)}; margin: 1vh var(--gg-side); color: var(--ctp-text, #fff); font-family: inherit; }`,
+        // Header block (title / logo + Native Home accent eyebrow or minimal unboxed metadata)
+        `.gg-titleblock { display: none; flex-direction: column; gap: ${d(minimal ? 10 : 12)}; max-width: ${d(minimal ? 780 : 660)}; margin: 1vh var(--gg-side); color: var(--ctp-text, #fff); font-family: inherit; }`,
         `.gg-eyebrow { ${pageType('eyebrow', d)} color: var(--ctp-accent-color, var(--glance-accent-text, #1a9fff)); }`,
-        `.gg-title { margin: calc(-1 * ${d(16)}); padding: ${d(16)}; ${pageType('title', d)} color: var(--ctp-text, #fff);
-            text-wrap: balance; text-shadow: 0 ${d(2)} ${d(16)} rgba(var(--ctp-base-rgb, 0, 0, 0), 0.55); overflow-wrap: anywhere;
-            display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }`,
+        `.nh-gv-eyebrow-row { display: inline-flex; align-items: center; gap: ${d(8)}; color: var(--ctp-subtext0, rgba(255, 255, 255, 0.78)); }`,
+        `.nh-gv-accent-tick { display: inline-block; width: ${d(3)}; height: ${d(12)}; border-radius: 0; background: var(--ctp-accent-color, var(--glance-accent-text, #1a9fff)); }`,
+        `.gg-title { margin: calc(-1 * ${d(12)}); padding: ${d(12)}; ${pageType('title', d)} font-size: ${d(minimal ? 44 : 56)}; color: var(--ctp-text, #fff);
+            text-wrap: balance; text-shadow: 0 ${d(2)} ${d(18)} rgba(var(--ctp-base-rgb, 0, 0, 0), 0.72); overflow-wrap: anywhere;
+            display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }`,
+        `.gg-logo { display: block; width: auto; height: auto; max-width: ${d(minimal ? 360 : LOGO_BOX.width)}; max-height: ${d(minimal ? 84 : LOGO_BOX.height)}; object-fit: contain; object-position: left bottom;
+            filter: drop-shadow(0 ${d(4)} ${d(22)} rgba(0, 0, 0, 0.55)); }`,
 
-        // The logo option (components/GameTitle): the game's logo in the title's place
-        `.gg-logo { display: block; width: auto; height: auto; max-width: ${d(LOGO_BOX.width)}; max-height: ${d(LOGO_BOX.height)}; object-fit: contain; object-position: left bottom;
-            filter: drop-shadow(0 ${d(4)} ${d(24)} rgba(0, 0, 0, 0.45)); }`,
+        // Minimalist unboxed typographic strip (zero cards, zero pills)
+        `.nh-gv-min-meta { display: flex; flex-wrap: wrap; align-items: baseline; gap: ${d(6)} ${d(8)}; font-size: ${d(13)}; line-height: 1.35;
+            color: var(--ctp-subtext0, rgba(255, 255, 255, 0.72)); text-shadow: 0 ${d(1)} ${d(8)} rgba(var(--ctp-base-rgb, 0, 0, 0), 0.85); }`,
+        `.nh-gv-min-item { display: inline-flex; align-items: baseline; white-space: nowrap; }`,
+        `.nh-gv-min-sep { margin-right: ${d(8)}; opacity: 0.45; }`,
+        `.nh-gv-min-label { font-size: ${d(11)}; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.75; margin-right: ${d(5)}; }`,
+        `.nh-gv-min-val { font-weight: 700; color: var(--ctp-text, #ffffff); }`,
+        `.nh-gv-min-accent .nh-gv-min-val { color: var(--ctp-accent-color, var(--glance-accent-text, #1a9fff)); }`,
 
-        // Cards: theme-adapted surface, border, and radius
-        `.gg-cards { display: grid; grid-template-columns: minmax(0, ${PAGE_LAYOUT.cards.split[0]}fr) minmax(0, ${PAGE_LAYOUT.cards.split[1]}fr); gap: ${d(PAGE_LAYOUT.cards.gridGap)}; }`,
-        `.gg-card { display: flex; flex-direction: column; gap: ${d(PAGE_LAYOUT.cards.colGap)}; padding: ${d(PAGE_LAYOUT.cards.padY)} ${d(PAGE_LAYOUT.cards.padX)}; border-radius: var(--gruvbox-radius, ${d(8)});
-            background: var(--ctp-surface0, rgba(20, 28, 38, 0.85)); border-color: var(--ctp-surface2, ${ring(0.14)}); border-width: ${d(1)}; backdrop-filter: none; color: var(--ctp-text, #fff);
-            min-height: ${d(PAGE_LAYOUT.playTop.tvCards - 2 * PAGE_LAYOUT.cards.padY - 2)}; max-width: ${cardContentMax(cardMaxWidths()[0])}; }`,
-        `.gg-card.gg-hltb { gap: ${d(PAGE_LAYOUT.cards.hltbGap)}; width: ${CARD_FILL_WIDTH}; max-width: ${cardContentMax(cardMaxWidths()[1])}; justify-self: end; }`,
-        `.gg-card-tap { transition: transform 120ms ease, box-shadow 120ms ease; }`,
-        `.gg-card-tap:active { transform: scale(0.98); }`,
-        `${HOVER} .gg-card-tap:hover { box-shadow: ${hoverRing(d(2))} !important; transform: translateY(${d(-2)}); }`,
-        `${HOVER} .gg-card-tap:hover:active { transform: translateY(${d(-2)}) scale(0.98); }`,
-        `${NOT_MOUSE} .gg-card-nav.gg-card-focus, ${NOT_MOUSE} .gg-card-nav:focus { box-shadow: 0 0 0 ${d(2)} var(--ctp-accent-color, var(--glance-accent)) !important; transform: translateY(${d(-4)}); outline: none; }`,
+        // Full Native Home Unified Architectural Dock (`.nh-gv-deck`)
         `.gg-hero { z-index: 2; pointer-events: none; color: var(--ctp-text, #fff); background: transparent !important; background-color: transparent !important; background-image: none !important; }`,
+        `.gg-hero img, .nh-gv-deck::after, .nh-gv-pane::after, .gg-card-tap::after { border-radius: 0 !important; outline: none !important; }`,
         `.gg-hero .gg-card-tap { pointer-events: auto; }`,
-        `.gg-hero, .gg-cards { transform-style: preserve-3d; }`,
+        `.nh-gv-deck { display: grid; grid-template-columns: minmax(0, 1.12fr) minmax(0, 0.88fr); border-radius: 0;
+            background: var(--ctp-surface0, rgba(20, 28, 38, 0.88)); border: ${d(1)} solid var(--ctp-surface2, rgba(255, 255, 255, 0.14));
+            border-left: ${d(3)} solid var(--ctp-accent-color, var(--glance-accent, #1a9fff)); overflow: hidden; box-shadow: 0 ${d(8)} ${d(26)} rgba(0, 0, 0, 0.35); }`,
+        `.nh-gv-pane { display: flex; flex-direction: column; justify-content: space-between; gap: ${d(10)}; padding: ${d(14)} ${d(18)}; min-width: 0; color: var(--ctp-text, #fff); }`,
+        `.nh-gv-synopsis { border-left: ${d(1)} solid var(--ctp-surface2, rgba(255, 255, 255, 0.1)); justify-content: flex-start; gap: ${d(8)}; }`,
+        `.gg-card-tap { transition: background 140ms ease, box-shadow 140ms ease; cursor: pointer; }`,
+        `${HOVER} .gg-card-tap:hover { background: var(--ctp-surface1, rgba(32, 44, 60, 0.92)); }`,
+        `${NOT_MOUSE} .gg-card-nav.gg-card-focus, ${NOT_MOUSE} .gg-card-nav:focus { background: var(--ctp-surface1, rgba(32, 44, 60, 0.94));
+            box-shadow: inset 0 0 0 ${d(2)} var(--ctp-accent-color, var(--glance-accent, #1a9fff)) !important; outline: none; border-radius: 0; }`,
+        `.nh-gv-metrics { display: flex; flex-wrap: wrap; align-items: flex-start; gap: ${d(24)}; }`,
+        `.nh-gv-stat { display: flex; flex-direction: column; gap: ${d(2)}; min-width: 0; }`,
+        `.nh-gv-stat-label { font-size: ${d(10)}; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ctp-subtext0, rgba(255, 255, 255, 0.64)); white-space: nowrap; }`,
+        `.nh-gv-stat-value { font-size: ${d(20)}; font-weight: 700; line-height: 1.15; color: var(--ctp-text, #fff); white-space: nowrap; }`,
+        `.nh-gv-stat-accent .nh-gv-stat-value { color: var(--ctp-accent-color, var(--glance-accent-text, #1a9fff)); }`,
+        `.nh-gv-mini-bar { margin-top: ${d(3)}; width: ${d(76)}; height: ${d(3)}; border-radius: 0; background: rgba(255, 255, 255, 0.14); overflow: hidden; }`,
+        `.nh-gv-mini-fill { height: 100%; border-radius: 0; background: var(--ctp-accent-color, var(--glance-accent, #1a9fff)); }`,
+        `.nh-gv-hltb-block { display: flex; flex-direction: column; gap: ${d(6)}; padding-top: ${d(8)}; border-top: ${d(1)} solid var(--ctp-surface2, rgba(255, 255, 255, 0.1)); }`,
+        `.nh-gv-hltb-cols { display: flex; flex-wrap: wrap; gap: ${d(22)}; }`,
+        `.nh-gv-hltb-cols .nh-gv-stat-value { font-size: ${d(18)}; }`,
+        `.nh-gv-hltb-empty { display: flex; align-items: baseline; gap: ${d(10)}; }`,
+        `.nh-gv-progress { height: ${d(4)}; border-radius: 0; background: rgba(255, 255, 255, 0.14); overflow: hidden; }`,
+        `.nh-gv-progress-fill { height: 100%; border-radius: 0; background: var(--ctp-accent-color, var(--glance-accent, #1a9fff)); }`,
+        `.nh-gv-caption, .nh-gv-muted { font-size: ${d(11.5)}; color: var(--ctp-subtext0, rgba(255, 255, 255, 0.68)); }`,
+        `.nh-gv-section-head { display: flex; align-items: center; justify-content: space-between; font-size: ${d(10)}; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ctp-subtext0, rgba(255, 255, 255, 0.65)); }`,
+        `.nh-gv-head-arrow { width: ${d(10)}; height: ${d(10)}; opacity: 0.7; }`,
+        `.nh-gv-desc { margin: 0; font-size: ${d(13.5)}; line-height: 1.48; color: var(--ctp-subtext1, rgba(255, 255, 255, 0.86));
+            display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }`,
+        `.nh-gv-desc-empty { opacity: 0.6; }`,
+        `.gg-hero, .nh-gv-deck { transform-style: preserve-3d; }`,
         rule(playSection && menuButton && [`${playSection}:has(${menuButton})`, `${playSection} :has(${menuButton})`], ' transform-style: preserve-3d !important; '),
-        `@media (min-aspect-ratio: 9/5) { .gg-card { max-width: ${cardContentMax(cardMaxWidths(PAGE_LAYOUT.cards.equalFromAspect)[0])}; } }`,
-        `.gg-label { ${pageType('label', d)} color: var(--ctp-subtext0, rgba(255, 255, 255, 0.65)); }`,
-        `.gg-value { ${pageType('value', d)} color: var(--ctp-text, #fff); }`,
-        `.gg-stats { gap: ${d(PAGE_LAYOUT.stats.colGapInfo)}; margin-top: 0; }`,
-        `.gg-hltb .gg-stats { gap: ${d(PAGE_LAYOUT.stats.colGapHltb)}; }`,
-        `.gg-stats > div { display: flex; flex-direction: column; gap: ${d(PAGE_LAYOUT.stats.rowGap)}; }`,
-        `.gg-desc { margin: 0; font-size: ${d(PAGE_LAYOUT.cardText.desc)}; line-height: ${PAGE_LAYOUT.cardText.descLine}; color: var(--ctp-subtext1, rgba(255, 255, 255, 0.86)); }`,
-        `.gg-bar { margin-top: 0; height: ${d(PAGE_LAYOUT.cardText.bar)}; border-radius: ${d(3)}; }`,
-        `.gg-bar > div { border-radius: ${d(3)}; }`,
-        `.gg-caption, .gg-muted { margin-top: 0; font-size: ${d(PAGE_LAYOUT.cardText.caption)}; color: var(--ctp-subtext0, rgba(255, 255, 255, 0.72)); }`,
-        `.gg-hltb .gg-stats > div .gg-value { color: inherit; }`,
-        `.gg-hltb .gg-stats > div:first-child .gg-value { color: var(--ctp-accent-color, var(--glance-accent-text, var(--gg-accent))); transition: color ${ACCENT_MS}ms; }`,
         `.gg-more { display: none; }`,
-        `.gg-pill { top: calc(-1 * ${d(PAGE_LAYOUT.storePillTop)}); border-radius: var(--gruvbox-radius, 999px); ${sourcePillLook(d)} }`,
-        `.gg-pill-icon { ${sourcePillIcon(d)} }`,
+        `.gg-pill { display: none !important; }`,
         rule(cls(shared, 'SharedLibrary'), ` display: none !important; `),
-        `.gg-family { position: absolute; right: calc(100% + ${d(10)}); top: 50%; transform: translateY(-50%); display: inline-flex; align-items: center;
-            margin: 0; border-radius: var(--gruvbox-radius, 999px); border: 1px solid; color: var(--ctp-text, #fff); line-height: 1; white-space: nowrap; ${sourcePillLook(d)} }`,
-        `.gg-family-icon { flex: 0 0 auto; ${sourcePillIcon(d)} }`,
+        `.gg-family { display: none !important; }`,
     ];
 
+    const tabs = cls(root, 'AppDetailsContainer');
     if (layout) {
         rules.push(
-            // Steam's header crops the hero at 50% 50%, Home at 50% 30%: the same image then sits the same on both screens,
-            // so the open transition's hand-over shows no jump (identical for standard heroes; taller custom art differs).
             rule(topCapsule && `${topCapsule} img`, ` object-position: 50% 30% !important; `),
-            // The title (or logo) and the eyebrow under it, at the left inset, their bottom the row-to-cards gap (36) above the
-            // Play row on every screen (the row sits lower on a TV, --gg-play-top's media query): title, eyebrow, row and
-            // cards stay one stack, the eyebrow always the same distance above the row, and a longer title grows upward.
-            rule(`${inner} > .gg-titleblock`, ` display: flex !important; position: absolute !important; top: calc(var(--gg-play-top) - ${d(PAGE_LAYOUT.titleGap)}) !important;
+            rule(`${inner} > .gg-titleblock`, ` display: flex !important; position: absolute !important; top: calc(var(--gg-play-top) - ${d(titleGap)}) !important;
                 transform: translateY(-100%) !important; left: var(--gg-side) !important; right: var(--gg-side) !important; margin: 0 !important; `),
-            // Steam's logo, and its text title for games without one, give way to our title (hidden in place), only
-            // while our title is on the page: Steam's header is the first child of the page container.
             rule(titleImage && `${inner}:has(> .gg-titleblock) ${topCapsule} ${titleImage}`, ` visibility: hidden !important; `),
             rule(svgTitle && `${inner}:has(> .gg-titleblock) ${topCapsule} ${svgTitle}`, ` visibility: hidden !important; `),
-            // Handoff: Play row top = H - 386 and row = pill 60 + 36 gap, so the cards (at the row's bottom) start at H - 290.
-            `:root { --gg-play-top: calc(100vh - ${d(PAGE_LAYOUT.playTop.spotlight)}); --gg-row-h: ${d(PAGE_LAYOUT.rowH)}; }`,
-            // A TV (the side inset's media query): Steam's legend is a fixed STEAM_LEGEND_PX at every size, so the handoff's
-            // H - 386, made for the handheld (where the legend is a third of that space), left a wide band under the cards.
-            // There the row and cards are set from the bottom: the cards (three description lines, TV_CARDS_H) end the TV's
-            // side inset (24) above the legend. The handheld and the Deck keep H - 386.
-            `${TV_QUERY} { :root { --gg-play-top: calc(100vh - ${STEAM_LEGEND_PX}px - ${d(PAGE_LAYOUT.rowH + TV_CARDS_H + TV_CARDS_GAP)}); } }`,
-            // The handoff's stronger scrims over the 1.1.1 ones.
-            rule(`${topCapsule}::after`, ` background: ${HANDOFF_SCRIM_LEFT}, ${HANDOFF_SCRIM_BOTTOM},
-                ${SCRIM_BOTTOM}, ${SCRIM_LEFT}; `),
+            `:root { --gg-play-top: ${minimal ? `calc(100vh - ${STEAM_LEGEND_PX}px - ${d(76)})` : `calc(100vh - ${STEAM_LEGEND_PX}px - ${d(266)})`}; --gg-row-h: ${d(rowH)}; }`,
+            rule(`${topCapsule}::after`, ` background: ${minimal ? minScrim : fullScrim}; `),
+            rule(tabs, ` margin-top: calc(100vh - var(--gg-play-top) - var(--gg-row-h) - 38px) !important; padding: 38px var(--gg-side) ${d(48)} !important; min-height: 100vh !important; box-sizing: border-box !important; position: relative !important; z-index: 4 !important; background: var(--ctp-base, #0e141b) !important; color: var(--ctp-text, #dcdedf) !important; `),
         );
     }
     return rules;
 }
 
 /** The page's new parts' fade-in after the open transition (motion.OPEN_TIMINGS.reveal, rise feedRise). */
-const ARRIVE_MS = 200;
-const ARRIVE_RISE_PX = 14;
+const ARRIVE_MS = 240;
+const ARRIVE_RISE_PX = 20;
 
 /**
  * The game page arriving after Spotlight Home's open transition (data/openIntent). 'parts': Home morphed into the page,
- * so only what Home had no counterpart for is hidden (Spotlight: the description, the HowLongToBeat title, its other
- * tiers, caption and bar; both looks: a size column, the family pill; Clean: the bars). 'all': the
+ * so only what Home had no counterpart for is hidden (buttons, telemetry dock or inline meta). 'all': the
  * whole page but its art (our title block and cards, Steam's Play row), lowered by the rise. `revealed`: the same
  * elements back to visible over ARRIVE_MS. Its own stylesheet, only with the full-screen layout; '' otherwise.
  */
@@ -800,52 +807,29 @@ export function buildArrivingCss(
 ): string {
     const { header, details, root, play } = classes;
     if (!(cls(header, 'TopCapsule') && cls(details, 'InnerContainer') && cls(details, 'AppDetailsOverviewPanel') && cls(root, 'AppDetailsContainer'))) return '';
-    // Not the cloud button: Home's moves into its place, so the page's own must be there at once. Unless Home showed
-    // none (`extra.cloud`: its state was not known yet), when the page's arrives like the other new parts.
     const cloud = extra.cloud ? cls(play, 'CloudStatusRow') : null;
-    // Nor the family pill when Home showed one (`extra.family`): it moved in with Home's store pill.
-    // A stat column Home showed no chip for (`extra.missing`: a new game's Play time), and Unifideck's store version
-    // dropdown (Steam's DialogDropDown), arrive too instead of popping in.
-    const missing = (extra.missing ?? []).filter((key) => /^[a-z]+$/i.test(key)).map((key) => `[data-stat="${key}"]`);
-    // Unifideck's Uninstall circle (its installed row's fourth button: Home's row has none) arrives too, not popping in;
-    // unless Home drew one at its place as it opened (`extra.uninstall`: homeCss .gh-open-circle), when the page's is
-    // there at once under the copy (arriving after the copy had faded, it flickered).
     const buttons = cls(root, 'AppButtons');
-    const uninstall = buttons && !extra.uninstall ? [`${UNIFIDECK_PAGE} ${buttons}:has(> :nth-child(4)) > :nth-child(n+4)`] : [];
-    const shared = [...(extra.size ? [] : ['[data-stat="size"]']), ...uninstall, ...missing, ...(extra.family ? [] : ['.gg-family']), ...(cloud ? [cloud] : []), ':has(> .DialogDropDown_CurrentDisplay)'];
-    // Spotlight: the description and the HowLongToBeat card's rest, unless Home drew them as it opened (`extra.desc`,
-    // `extra.hltb`: home/OpenExtras), when the page's are there at once under Home's copy.
-    const desc = extra.desc ? [] : ['.gg-desc'];
-    const hltb = extra.hltb ? [] : ['.gg-hltb > .gg-label', '.gg-hltb [data-stat="hltb"] > .gg-label', '.gg-hltb [data-stat="mainExtras"]', '.gg-hltb [data-stat="completionist"]', '.gg-caption', '.gg-hltb .gg-bar', '.gg-muted'];
+    const shared = [...(cloud ? [cloud] : []), ':has(> .DialogDropDown_CurrentDisplay)'];
     const parts = look === 'spotlight'
-        ? [...desc, ...hltb, ...shared]
-        : [...shared, cleanBarsArriving(extra.bars)];
+        ? present([buttons, '.nh-gv-deck', '.gg-eyebrow', ...shared])
+        : present([buttons, '.nh-gv-min-meta', ...shared]);
     const all = present(['.gg-titleblock', '.gg-hero', cls(root, 'PlaySection')]);
     const list = mode === 'all' ? all : parts;
     // Steam fades every page in by itself (TopLevelTransition: 200 ms delay, then 600 ms; probed on the Ally). Under the
     // open transition's bridge that fade would show black; the arriving page is shown at once instead.
     const steamFade = buildSteamEnterOffCss(classes);
-    // Revealed: 'all' lifts the whole page back from its rise; 'parts' only fades in, so a part placed by its own
-    // transform (the family pill's translateY(-50%) beside the store pill) keeps it.
     const body = revealed
         ? mode === 'all'
-            ? ` opacity: 1 !important; transform: none !important; transition: opacity ${ARRIVE_MS}ms ease, transform ${ARRIVE_MS}ms cubic-bezier(.2,.8,.2,1) !important; `
+            ? ` opacity: 1 !important; translate: 0 0 !important; transition: opacity ${ARRIVE_MS}ms ease, translate ${ARRIVE_MS}ms cubic-bezier(.2,.8,.2,1) !important; `
             : ` opacity: 1 !important; transition: opacity ${ARRIVE_MS}ms ease !important; `
         : mode === 'all'
-            ? ` opacity: 0 !important; transform: translateY(${ARRIVE_RISE_PX}px) !important; `
+            ? ` opacity: 0 !important; translate: 0 ${ARRIVE_RISE_PX}px !important; `
             : ' opacity: 0 !important; ';
     // Steam fades its focus look onto Play (background and colour, 200 ms) as it focuses it, after the page is ready;
     // Home's copy already shows Play focused, so the page's must be lit at once.
     const playButton = cls(root, 'ActionButtonAndStatusPanel');
     const focusAtOnce = rule(playButton && [`${playButton} [role="button"]`, `${playButton} > div:has(> [role="button"])`], ' transition: none !important; ');
-    // (The glass, Clean panel and Spotlight cards, keeps its own blur: Home's copy draws it blurred too.)
     return [steamFade, rule(list, body), focusAtOnce].filter((r) => r.length > 0).join('\n');
-}
-
-/** Clean's bars that arrive: all of them, or (`brought`: the stats whose bar Home's morph moved into place) the others. */
-function cleanBarsArriving(brought: string[] | undefined): string {
-    if (!brought || brought.length === 0) return '.gg-clean-info .gg-bar';
-    return `.gg-clean-info > [data-stat]${brought.map((key) => `:not([data-stat="${key.replace(/[^a-z]/gi, '')}"])`).join('')} .gg-bar`;
 }
 
 /**

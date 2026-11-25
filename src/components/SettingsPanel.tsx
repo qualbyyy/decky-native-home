@@ -1,12 +1,16 @@
 import { toaster } from '@decky/api';
 import { ButtonItem, DropdownItem, PanelSection, PanelSectionRow, ToggleField } from '@decky/ui';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { PLUGIN_NAME } from '../constants';
 import { cache } from '../data/cache';
 import { checkRepositoryUpdate, RepositoryUpdateState } from '../data/repositoryUpdate';
-import { HomeLayout, MinimalSide, PluginLanguage, settings, useSettings } from '../data/settings';
+import { GamePageLayout, HomeLayout, LibraryGridSize, LibraryLayout, MinimalSide, settings, useSettings } from '../data/settings';
+import { getSteamLanguage, peekSteamLanguage } from '../data/steam';
 import { RECENT_ROW, ROW_SORTS, RowSort, rowSortLabel, sortByLabel, steamHomeCollections } from '../home/collections';
 import { RowStyle } from '../home/recentsLayout';
+import { useAsync } from '../hooks/useAsync';
+import { isRussianSystem } from '../i18n/steamText';
+import { registerMenuChromeDocument } from '../styles/menuChromeHost';
 
 const LABELS = {
     en: {
@@ -23,9 +27,21 @@ const LABELS = {
         carouselStyle: 'Carousel style',
         gamesList: 'Games list',
         recentGames: 'Recent games',
+        library: 'Library',
+        enableLibrary: 'Custom Library tab',
+        libraryMode: 'Library layout',
+        gridColumns: 'Covers per row',
+        gridSize: 'Cover size',
+        small: 'Small',
+        medium: 'Medium',
+        large: 'Large',
+        followHome: 'Follow Home',
+        coverGrid: 'Cover grid',
         gamePage: 'Game Page',
         enableGamePage: 'Built-in game page',
-        compactPage: 'Compact page layout',
+        gamePageMode: 'Game page style',
+        fullView: 'Full',
+        minimalView: 'Minimalist',
         hideCover: 'Hide cover on game page',
         elements: 'Elements',
         gameLogos: 'Game logos',
@@ -34,6 +50,7 @@ const LABELS = {
         playtimeChip: 'Playtime next to Play',
         hltbChip: 'HowLongToBeat next to Play',
         hideTopBg: 'Hide top bar background',
+        customMenus: 'Custom context windows',
         hltb: 'HowLongToBeat',
         autoPreload: 'Auto-preload HLTB',
         clearCache: 'Clear HLTB cache',
@@ -59,9 +76,21 @@ const LABELS = {
         carouselStyle: 'Стиль карусели',
         gamesList: 'Список игр',
         recentGames: 'Недавние игры',
+        library: 'Библиотека',
+        enableLibrary: 'Кастомная вкладка библиотеки',
+        libraryMode: 'Вид библиотеки',
+        gridColumns: 'Обложек в строке',
+        gridSize: 'Размер обложек',
+        small: 'Маленькие',
+        medium: 'Средние',
+        large: 'Большие',
+        followHome: 'Как на главной',
+        coverGrid: 'Сетка обложек',
         gamePage: 'Страница игры',
         enableGamePage: 'Встроенная страница игры',
-        compactPage: 'Компактный вид страницы',
+        gamePageMode: 'Стиль страницы игры',
+        fullView: 'Полный',
+        minimalView: 'Минималистичный',
         hideCover: 'Скрывать обложку на странице игры',
         elements: 'Элементы',
         gameLogos: 'Логотипы игр',
@@ -70,6 +99,7 @@ const LABELS = {
         playtimeChip: 'Время игры рядом с «Играть»',
         hltbChip: 'HowLongToBeat рядом с «Играть»',
         hideTopBg: 'Скрывать фон верхней панели',
+        customMenus: 'Кастомные контекстные окна',
         hltb: 'HowLongToBeat',
         autoPreload: 'Автозагрузка HLTB',
         clearCache: 'Очистить кэш HLTB',
@@ -85,9 +115,12 @@ const LABELS = {
 
 export function SettingsPanel() {
     const {
-        language,
         enabled,
-        cleanPage,
+        gamePageLayout,
+        customLibrary,
+        libraryLayout,
+        libraryGridColumns,
+        libraryGridSize,
         spotlightHome,
         homeLayout,
         minimalSide,
@@ -101,10 +134,19 @@ export function SettingsPanel() {
         showPlaytime,
         showHltb,
         hideStatusBarBackground,
+        customMenus,
         hideGameCover,
         autoPreload,
     } = useSettings();
-    const t = LABELS[language];
+    const knownLang = peekSteamLanguage();
+    const loadedLang = useAsync(knownLang ? null : 'lang', getSteamLanguage);
+    const t = LABELS[knownLang ?? loadedLang ? (isRussianSystem() ? 'ru' : 'en') : (isRussianSystem() ? 'ru' : 'en')];
+    const qamMarkerRef = useRef<HTMLSpanElement | null>(null);
+    useEffect(() => {
+        if (customMenus && qamMarkerRef.current?.ownerDocument) {
+            registerMenuChromeDocument(qamMarkerRef.current.ownerDocument, 'quickaccess');
+        }
+    }, [customMenus]);
     const [updateState, setUpdateState] = useState<RepositoryUpdateState | { status: 'idle' | 'checking'; current: string | null }>({ status: 'idle', current: null });
     const collections = useMemo(steamHomeCollections, []);
     const checkUpdates = async () => {
@@ -122,6 +164,14 @@ export function SettingsPanel() {
 
     return (
         <>
+            <span
+                ref={(el) => {
+                    qamMarkerRef.current = el;
+                    if (customMenus && el?.ownerDocument) registerMenuChromeDocument(el.ownerDocument, 'quickaccess');
+                }}
+                style={{ display: 'none' }}
+                aria-hidden="true"
+            />
             <PanelSection title={t.home}>
                 <PanelSectionRow>
                     <ToggleField
@@ -203,6 +253,59 @@ export function SettingsPanel() {
                 )}
             </PanelSection>
 
+            <PanelSection title={t.library}>
+                <PanelSectionRow>
+                    <ToggleField
+                        label={t.enableLibrary}
+                        checked={customLibrary}
+                        onChange={(value) => settings.setCustomLibrary(value)}
+                    />
+                </PanelSectionRow>
+                {customLibrary && (
+                    <>
+                        <PanelSectionRow>
+                            <DropdownItem
+                                label={t.libraryMode}
+                                menuLabel={t.libraryMode}
+                                rgOptions={[
+                                    { data: 'auto', label: t.followHome },
+                                    { data: 'grid', label: t.coverGrid },
+                                    { data: 'minimal', label: t.minimal },
+                                ]}
+                                selectedOption={libraryLayout}
+                                onChange={(option) => settings.setLibraryLayout(option.data as LibraryLayout)}
+                            />
+                        </PanelSectionRow>
+                        {(libraryLayout === 'grid' || (libraryLayout === 'auto' && homeLayout === 'carousel')) && (
+                            <>
+                                <PanelSectionRow>
+                                    <DropdownItem
+                                        label={t.gridColumns}
+                                        menuLabel={t.gridColumns}
+                                        rgOptions={[4, 5, 6, 7].map((value) => ({ data: value, label: String(value) }))}
+                                        selectedOption={libraryGridColumns}
+                                        onChange={(option) => settings.setLibraryGridColumns(Number(option.data))}
+                                    />
+                                </PanelSectionRow>
+                                <PanelSectionRow>
+                                    <DropdownItem
+                                        label={t.gridSize}
+                                        menuLabel={t.gridSize}
+                                        rgOptions={[
+                                            { data: 'compact', label: t.small },
+                                            { data: 'standard', label: t.medium },
+                                            { data: 'large', label: t.large },
+                                        ]}
+                                        selectedOption={libraryGridSize}
+                                        onChange={(option) => settings.setLibraryGridSize(option.data as LibraryGridSize)}
+                                    />
+                                </PanelSectionRow>
+                            </>
+                        )}
+                    </>
+                )}
+            </PanelSection>
+
             <PanelSection title={t.gamePage}>
                 <PanelSectionRow>
                     <ToggleField
@@ -214,10 +317,16 @@ export function SettingsPanel() {
                 {enabled && (
                     <>
                         <PanelSectionRow>
-                            <ToggleField
-                                label={t.compactPage}
-                                checked={cleanPage}
-                                onChange={(value) => settings.setCleanPage(value)}
+                            <DropdownItem
+                                label={t.gamePageMode}
+                                menuLabel={t.gamePageMode}
+                                rgOptions={[
+                                    { data: 'auto', label: t.followHome },
+                                    { data: 'full', label: t.fullView },
+                                    { data: 'minimal', label: t.minimalView },
+                                ]}
+                                selectedOption={gamePageLayout}
+                                onChange={(option) => settings.setGamePageLayout(option.data as GamePageLayout)}
                             />
                         </PanelSectionRow>
                         <PanelSectionRow>
@@ -274,6 +383,13 @@ export function SettingsPanel() {
                         onChange={(value) => settings.setHideStatusBarBackground(value)}
                     />
                 </PanelSectionRow>
+                <PanelSectionRow>
+                    <ToggleField
+                        label={t.customMenus}
+                        checked={customMenus}
+                        onChange={(value) => settings.setCustomMenus(value)}
+                    />
+                </PanelSectionRow>
             </PanelSection>
 
             <PanelSection title={t.hltb}>
@@ -302,21 +418,6 @@ export function SettingsPanel() {
                     <ButtonItem layout="below" onClick={checkUpdates}>
                         {updateState.status === 'checking' ? t.checkingUpdates : t.checkUpdates}
                     </ButtonItem>
-                </PanelSectionRow>
-            </PanelSection>
-
-            <PanelSection title={t.language}>
-                <PanelSectionRow>
-                    <DropdownItem
-                        label={t.language}
-                        menuLabel={t.language}
-                        rgOptions={[
-                            { data: 'en', label: 'English' },
-                            { data: 'ru', label: 'Русский' },
-                        ]}
-                        selectedOption={language}
-                        onChange={(option) => settings.setLanguage(option.data as PluginLanguage)}
-                    />
                 </PanelSectionRow>
             </PanelSection>
         </>

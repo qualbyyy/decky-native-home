@@ -1,3 +1,5 @@
+import { peekSteamLanguage } from '../data/steam';
+
 /**
  * Words the theme draws, in Steam's own language: each phrase names the Steam localization token that says it in the
  * Steam UI (probed on the Ally, Spanish, 2026-10-07: the same words Steam's own Home and game pages show) and our English
@@ -104,6 +106,10 @@ export const PHRASES = {
     update: p('Button_Update', 'Update'),
     download: p('GameAction_Download', 'Download'),
     installed: p('LibraryTab_Installed', 'Installed'),
+    installedStatus: p('AppDetails_Installed', 'Installed'),
+    notInstalled: p('FilterElement_NotInstalled', 'Not installed'),
+    all: p('FilterElement_All', 'All'),
+    nonSteam: p('LibraryTab_NonSteam', 'Non-Steam'),
     favorites: p('LibraryTab_Favorites', 'Favorites'),
     // A game borrowed from the user's Steam Families library (Steam's name for the feature).
     familySharing: p('AppDetails_Feature_FamilySharing', 'Family Sharing'),
@@ -112,12 +118,22 @@ export const PHRASES = {
     sortLastPlayed: p('Library_SortByLastPlayed', 'Last Played'),
     sortName: p('Library_SortByAlphabetical', 'Alphabetical'),
     sortAdded: p('Library_SortByAddedToLibrary', 'Date Added to Library'),
+    sortPlaytime: p('Library_SortByHoursPlayed', 'Playtime'),
     sortBy: p('AppProperties_Workshop_SortBy_Label', 'Sort By:'),
     storage: p('Settings_Page_Storage', 'Storage'),
     wired: p('VRLinkType_WiredToRouter', 'Wired connection'),
 } as const;
 
 export type PhraseKey = keyof typeof PHRASES;
+
+const RU_FALLBACK: Partial<Record<PhraseKey, string>> = {
+    all: 'Все',
+    nonSteam: 'Сторонние',
+    installedStatus: 'Установлено',
+    notInstalled: 'Не установлено',
+    sortPlaytime: 'По времени в игре',
+    noMatches: 'Игры не найдены',
+};
 
 const PILL_WORDS: Record<string, PhraseKey> = { Play: 'play', Install: 'install', Resume: 'resume', Pause: 'pause', Download: 'download', Update: 'update' };
 
@@ -156,12 +172,26 @@ export function fillTemplate(template: string, values: Array<string | number>): 
     return missing ? null : out;
 }
 
+/** True when Steam's active system language is Russian. */
+export function isRussianSystem(manager: LocalizationLike | undefined = (globalThis as { LocalizationManager?: LocalizationLike }).LocalizationManager): boolean {
+    const lang = peekSteamLanguage()?.trim().toLowerCase();
+    if (lang) return lang === 'russian';
+    const sample = steamToken('StartPage_Library', manager) ?? steamToken('GameAction_Play', manager);
+    return typeof sample === 'string' && /[А-Яа-яЁё]/.test(sample);
+}
+
 /**
- * The phrase in Steam's language, with values filled in. A missing token, or a template that cannot be filled, gives our English (filled the same way), so the UI never shows a raw token or a broken sentence.
+ * The phrase in Steam's language, with values filled in. A missing token, or a template that cannot be filled, gives our English (or Russian when Steam runs in Russian), so the UI never shows a raw token or a broken sentence.
  */
 export function tr(key: PhraseKey, values: Array<string | number> = [], manager?: LocalizationLike): string {
     const phrase = PHRASES[key];
     const steam = steamToken(phrase.token, manager ?? (globalThis as { LocalizationManager?: LocalizationLike }).LocalizationManager);
     const filled = steam === undefined ? null : fillTemplate(steam, values);
-    return filled ?? fillTemplate(phrase.en, values) ?? phrase.en;
+    if (filled !== null) return filled;
+    if (isRussianSystem(manager)) {
+        const ru = RU_FALLBACK[key];
+        const ruFilled = ru === undefined ? null : fillTemplate(ru, values);
+        if (ruFilled !== null) return ruFilled;
+    }
+    return fillTemplate(phrase.en, values) ?? phrase.en;
 }

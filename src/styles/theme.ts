@@ -1,4 +1,4 @@
-import { appDetailsClasses, appDetailsHeaderClasses, findClassModule, playSectionClasses } from '@decky/ui';
+import { appDetailsClasses, appDetailsHeaderClasses, basicAppDetailsSectionStylerClasses, findClassModule, playSectionClasses } from '@decky/ui';
 import { LOG_PREFIX } from '../constants';
 import { arrivalSelectors, buildAccentCss, steamFooterSelector, buildArrivingCss, buildSteamEnterOffCss, buildCleanCss, buildDownloadCss, buildLaunchCss, buildRingCss, buildThemeCss, buildUnifideckCss, ClassMap, launchTargets, playRowSelector, ringBoost, ThemeClasses, ThemeOptions, twinTargets } from './themeCss';
 import { viewportSize } from '../home/openHome';
@@ -15,12 +15,31 @@ function safeFind(filter: (m: Record<string, string>) => boolean): ClassMap {
     }
 }
 
+function validMap(mod: unknown, key: string): ClassMap {
+    const map = mod as ClassMap | undefined;
+    const val = map?.[key];
+    return typeof val === 'string' && val.length > 0 ? map : undefined;
+}
+
 /** Steam's class maps, lazily resolved per field so early Home calls never freeze missing modules. */
 function themeClasses(): ThemeClasses {
-    classes.header ??= (appDetailsHeaderClasses as unknown as ClassMap) ?? safeFind((m) => Boolean(m.TopCapsule));
-    classes.details ??= (appDetailsClasses as unknown as ClassMap) ?? safeFind((m) => Boolean(m.HeaderLoaded && m.InnerContainer));
-    classes.play ??= (playSectionClasses as unknown as ClassMap) ?? safeFind((m) => Boolean(m.PlayBarDetailLabel));
-    classes.root ??= safeFind((m) => Boolean(m.AppDetailsRoot && m.PlaySection && m.AppDetailsContainer));
+    classes.header ??= validMap(appDetailsHeaderClasses, 'TopCapsule') ?? safeFind((m) => Boolean(m.TopCapsule));
+    classes.details ??=
+        validMap(appDetailsClasses, 'InnerContainer') ??
+        safeFind((m) => Boolean(m.HeaderLoaded && m.InnerContainer)) ??
+        safeFind((m) => Boolean(m.InnerContainer && m.AppDetailsOverviewPanel));
+    classes.play ??=
+        validMap(playSectionClasses, 'MenuButton') ??
+        safeFind((m) => Boolean(m.PlayBarDetailLabel)) ??
+        safeFind((m) => Boolean(m.MenuButton && m.CloudStatusRow));
+    classes.root ??=
+        validMap(basicAppDetailsSectionStylerClasses, 'AppDetailsRoot') ??
+        safeFind((m) => Boolean(m.AppDetailsRoot && m.PlaySection && m.AppDetailsContainer)) ??
+        safeFind((m) => Boolean(m.PlaySection && m.ActionRow));
+    classes.feedback ??=
+        validMap(classes.root, 'DeckVerifiedFeedbackContainer') ??
+        validMap(basicAppDetailsSectionStylerClasses, 'DeckVerifiedFeedbackContainer') ??
+        safeFind((m) => Boolean(m.DeckVerifiedFeedbackContainer || m.DeckVerifiedFeedbackConfirmationContainer));
     classes.overview ??= safeFind((m) => Boolean(m.Backdrop && m.BackdropGlass));
     classes.launch ??= safeFind((m) => Boolean(m.Container && m.ConfigurationHeader && m.ControlOverviewContainer));
     classes.shared ??= safeFind((m) => Boolean(m.SharedLibrary && m.Row)) ?? safeFind((m) => Boolean(m.SharedLibrary)) ?? classes.play;

@@ -10,11 +10,20 @@ type Finder = (tree: any, predicate: (node: any) => boolean) => any;
  */
 export function insertHero(ret: any, innerClass: string | undefined, element: { key: unknown }, find: Finder, overviewClass?: string): InsertResult {
     try {
-        if (!ret || !innerClass) return 'noContainer';
-        const container = find(
-            ret,
-            (x: any) => Array.isArray(x?.props?.children) && typeof x?.props?.className === 'string' && x.props.className.includes(innerClass),
-        )?.props?.children as any[] | undefined;
+        if (!ret) return 'noContainer';
+        let container = innerClass
+            ? (find(
+                ret,
+                (x: any) => Array.isArray(x?.props?.children) && typeof x?.props?.className === 'string' && x.props.className.includes(innerClass),
+            )?.props?.children as any[] | undefined)
+            : undefined;
+        // Structural fallback when Steam renames or strips InnerContainer's CSS class name.
+        if (!container) {
+            container = find(
+                ret,
+                (x: any) => Array.isArray(x?.props?.children) && x.props.children.some((c: any) => c?.props?.children?.props?.overview !== undefined),
+            )?.props?.children as any[] | undefined;
+        }
         if (!container) return 'noContainer';
         if (container.some((child) => child?.key === element.key)) return 'present';
         let index = container.findIndex(

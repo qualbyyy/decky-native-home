@@ -5,8 +5,7 @@ import { markLeaving } from './homeMemory';
 import { playNavSound } from './navSound';
 import { takeSteamFocus } from './steamFocus';
 import { createOpenTransition, OpenTransition } from './openTransition';
-import { applyOpening, canvasMeasure, lineMeasure, extrasFlags, missingStats, OpenVariant, openVariant, pageStatsFromChips, readChipTexts, readExtrasAsked, readExtrasSize, readTwinTexts, measureHome, settleTwins, viewportSize } from './openHome';
-import { TwinSpec, twinSpecs } from './openTwins';
+import { applyOpening, canvasMeasure, lineMeasure, OpenVariant, openVariant, pageStatsFromChips, readChipTexts, measureHome, settleTwins, viewportSize } from './openHome';
 import { openMotion } from './openMotion';
 import { pageTargets, PageLook } from './openTargets';
 import { mountOpenBridge } from './openBridge';
@@ -181,20 +180,11 @@ function startHome(c: OpenContext): (() => void) | null {
             const scale = home && canvasEl && canvasEl.offsetWidth > 0 ? home.canvas.w / canvasEl.offsetWidth : 0;
             const screen = win ? viewportSize(win) : { width: 0, height: 0 };
             if (home && scale > 0 && screen.width > 0 && screen.height > 0) {
-                // A Unifideck game's size column Home drew: the page has it right after Played, so the columns land where the page puts them.
-                const size = c.extras.split(' ').includes('size') ? readExtrasSize(root) : null;
-                const stats = pageStatsFromChips(readChipTexts(root), c.look, size);
+                const stats = pageStatsFromChips(readChipTexts(root), c.look, null);
                 const store = home.store ?? { x: 0, y: 0, w: 0, h: 0 };
-                const page = pageTargets(c.look, screen, stats, canvasMeasure(root), { w: store.w, h: store.h }, c.extras ? readExtrasAsked(root) : undefined, lineMeasure(root));
+                const page = pageTargets(c.look, screen, stats, canvasMeasure(root), { w: store.w, h: store.h }, undefined, lineMeasure(root));
                 const focused = !root.ownerDocument?.documentElement?.hasAttribute(MOUSE_ATTR);
-                // The moving text as page-sized twins (openTwins); without them (any failure) Home's own text morphs as before.
-                let twins: TwinSpec[] = [];
-                try {
-                    twins = twinSpecs(home, page, readTwinTexts(root), stats, c.look, focused, scale);
-                } catch (error) {
-                    console.warn(`${LOG_PREFIX} Home: could not set up the text twins`, error);
-                }
-                return applyOpening(root, 'morph', openMotion(home, page, c.look, scale, focused), null, c.extras, twins);
+                return applyOpening(root, 'morph', openMotion(home, page, c.look, scale, focused), null, '', []);
             }
         } catch (error) {
             console.warn(`${LOG_PREFIX} Home: could not set up the morph`, error);
@@ -282,20 +272,9 @@ export function openGame(appId: number, source?: HTMLElement | null) {
         const newGame = variant === 'morph' && root?.querySelector('.gh-eyebrow[data-new]') !== null;
         // Home without its cloud button (the state was not known yet): the page's arrives instead of popping in.
         const homeCloud = variant === 'morph' && root ? root.querySelector('.gh-actions .gh-btn[data-action="cloud"]') !== null : undefined;
-        // Clean: the chips whose bar the morph moves onto the panel's (openMotion), so the page's do not fade in again.
-        const homeBars = variant === 'morph' && look === 'clean' && root ? readChipTexts(root).filter((c) => c.bar).map((c) => c.key) : undefined;
-        // Spotlight: the description and the HowLongToBeat card's rest Home draws as it turns into the page (OpenExtras).
-        // (The Clean look shows neither, only the store pill.)
-        const drawn = variant === 'morph' && root ? root.querySelector('.gh-open-extras')?.getAttribute('data-parts') ?? '' : '';
-        const extras = look === 'spotlight' ? drawn : drawn.split(' ').filter((p) => p === 'pills' || p === 'played' || p === 'size').join(' ');
-        // The family library pill moves in with Home's store pill: the page's must not arrive again (it blinked).
+        const extras = '';
         const homeFamily = variant === 'morph' && root ? root.querySelector('.gh-family') !== null : undefined;
-        // The page's stat columns Home showed no chip for (a new game's Play time) arrive instead of popping in.
-        const homeMissing = variant === 'morph' && root ? missingStats(readChipTexts(root).map((c) => c.key), extras) : undefined;
-        const homeChipKeys = variant === 'morph' && root ? readChipTexts(root).map((c) => c.key) : [];
-        // A Unifideck game's Uninstall circle Home draws as it opens (.gh-open-circle): the page's must not arrive again.
-        const homeUninstall = variant === 'morph' && root ? root.querySelector('.gh-open-circle') !== null : undefined;
-        const intent: OpenIntent = { look: pageRestyled ? look : 'steam', mode: variant === 'morph' ? 'parts' : 'all', eyebrow, newGame, homeCloud, homeBars, homeFamily, homeMissing, homeUninstall, ...extrasFlags(extras, homeChipKeys) };
+        const intent: OpenIntent = { look: pageRestyled ? look : 'steam', mode: variant === 'morph' ? 'parts' : 'all', eyebrow, newGame, homeCloud, homeFamily };
         next = { root, appId, variant, look, heroUrl, intent, extras };
         controller().open(appId, variant);
     } catch (error) {

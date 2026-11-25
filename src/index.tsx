@@ -8,7 +8,9 @@ import { settings } from './data/settings';
 import { getSteamLanguage } from './data/steam';
 import { patchGamePage } from './patches/gamePage';
 import { patchHomePage } from './patches/homePage';
+import { patchLibraryPage } from './patches/libraryPage';
 import { noteLoad, remountHomeAfterReload } from './home/reloadRemount';
+import { installMenuChrome } from './styles/menuChromeHost';
 
 function NativeHomeIcon() {
     return (
@@ -24,6 +26,8 @@ export default definePlugin(() => {
     void getSteamLanguage();
     const unpatchGamePage = patchGamePage();
     const unpatchHome = patchHomePage();
+    const unpatchLibrary = patchLibraryPage();
+    const uninstallMenuChrome = installMenuChrome();
     const cancelRemount = remountHomeAfterReload(noteLoad());
     const stopAutoPreload = startAutoPreload();
     console.log(`${LOG_PREFIX} loaded`);
@@ -36,6 +40,8 @@ export default definePlugin(() => {
             const steps: [string, () => void][] = [
                 ['game page unpatch', unpatchGamePage],
                 ['Home unpatch', unpatchHome],
+                ['Library unpatch', unpatchLibrary],
+                ['menu chrome cleanup', uninstallMenuChrome],
                 ['Home reopen cancel', cancelRemount],
                 ['auto preload stop', stopAutoPreload],
                 ['downloads stop', stopDownloads],

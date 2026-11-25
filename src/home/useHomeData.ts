@@ -6,6 +6,7 @@ import { cache, overrides, TTL } from '../data/cache';
 import { hltbCacheKey, HltbResult, lookupHltb } from '../data/hltb';
 import { DEMO_APP_TYPE, GAME_APP_TYPE, SHORTCUT_APP_TYPE } from '../data/installedGames';
 import { useSettings } from '../data/settings';
+import { homeMode } from './mode';
 import { getSourceLabel } from '../data/source';
 import { mergePlaytime } from '../data/unifideckPlaytime';
 import { useUnifideckPlaytime } from '../hooks/useUnifideckPlaytime';
@@ -572,7 +573,9 @@ function useFriendLastGames(raw: RawFriend[]): LastGames {
  * `focusIndex` is the selected recents item (L1/R1, bumper navigation); an index past the end keeps the last game (the Library card).
  */
 export function useHomeData(focusIndex = 0): HomeData {
-    const { wishlistDeals, homeRow, homeRowSort, cleanPage } = useSettings();
+    const currentSettings = useSettings();
+    const { homeRow, homeRowSort } = currentSettings;
+    const skipDescription = homeMode(currentSettings).minimalDetails;
     const { games, collection: rowCollection, settled: recentsSettled } = useRowGames(homeRow, homeRowSort);
     const focused = games.length > 0 ? games[Math.min(Math.max(0, focusIndex), games.length - 1)] : null;
     const appId = focused?.appId ?? null;
@@ -628,7 +631,7 @@ export function useHomeData(focusIndex = 0): HomeData {
     // Spotlight look; the Clean look has none). Kept in the session memo, which the page reads on its first frame.
     const warmedDescription = focused && lang ? peekDescription(focused.appId, lang) : undefined;
     const liveDescription = useAsync(
-        !cleanPage && focused && info && lang && resting !== null && !warmedDescription ? `desc:${focused.appId}:${lang}` : null,
+        !skipDescription && focused && info && lang && resting !== null && !warmedDescription ? `desc:${focused.appId}:${lang}` : null,
         async () => {
             if (!focused || !info || !lang) return null;
             const text = info.isShortcut
@@ -638,7 +641,7 @@ export function useHomeData(focusIndex = 0): HomeData {
             return text;
         },
     );
-    const description = cleanPage ? null : (warmedDescription ?? liveDescription ?? null);
+    const description = skipDescription ? null : (warmedDescription ?? liveDescription ?? null);
     const source = useAsync(info ? `src:${info.appId}` : null, () =>
         getSourceLabel(info?.appId ?? 0, info?.isShortcut ?? false, undefined, heroicStoreLabel(info?.heroic ?? null)),
     );

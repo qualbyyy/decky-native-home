@@ -8,6 +8,9 @@ import { RouteGuard } from '../home/RouteGuard';
 import { cancelOpen } from '../home/homeNav';
 import { homeMode } from '../home/mode';
 import { createHomePatchManager } from './homePatchManager';
+import { createAfterPatchGuard } from './patchOnce';
+
+const afterPatchOnce = createAfterPatchGuard(afterPatch);
 
 const KEY = 'native-home-root';
 const warned = new Set<string>();
@@ -47,7 +50,7 @@ const homeRoutePatch: RoutePatch = (routeProps: any) => {
             warnOnce("Home route shape changed");
             return routeProps;
         }
-        afterPatch(routeProps.children, 'type', (_: unknown[], element: any) => {
+        afterPatchOnce(routeProps.children, 'type', (_: unknown[], element: any) => {
             try {
                 if (!isMemoHome(element)) {
                     warnOnce("Steam's Home element changed");

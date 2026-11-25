@@ -5,6 +5,9 @@ import { GameHero } from '../components/GameHero';
 import { LOG_PREFIX } from '../constants';
 import { innerContainerClass, overviewPanelClass } from '../styles/theme';
 import { insertHero, InsertResult } from './insertHero';
+import { createAfterPatchGuard } from './patchOnce';
+
+const afterPatchOnce = createAfterPatchGuard(afterPatch);
 
 const ROUTE = '/library/app/:appid';
 const KEY = 'native-home-game';
@@ -58,7 +61,7 @@ export function patchGamePage(): () => void {
                     return ret;
                 },
             );
-            afterPatch(routeProps, 'renderFunc', handler);
+            afterPatchOnce(routeProps, 'renderFunc', handler);
         } catch (error) {
             console.warn(`${LOG_PREFIX} route patch failed; leaving page unchanged`, error);
         }

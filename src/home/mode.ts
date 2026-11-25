@@ -3,17 +3,26 @@ import { Settings } from '../data/settings';
 export interface HomeMode {
     gamePage: boolean;
     home: boolean;
+    library: boolean;
     restyleDetails: boolean;
-    /** The Native Home page's Clean look (one row at the bottom, no description or HowLongToBeat cards). */
+    /** Native Home GameView minimalist mode (no cards/synopsis deck, compact bottom row + flat inline metadata). */
+    minimalDetails: boolean;
+    /** Alias kept for openIntent / openHome compatibility. */
     cleanDetails: boolean;
+    /** Custom Library tab minimalist mode (vertical borderless list + full hero art). */
+    minimalLibrary: boolean;
 }
 
 export function homeMode(s: Settings): HomeMode {
+    const minimalDetails = s.enabled && (s.gamePageLayout === 'minimal' || (s.gamePageLayout === 'auto' && (s.homeLayout === 'minimal' || s.cleanPage)));
+    const minimalLibrary = s.libraryLayout === 'minimal' || (s.libraryLayout === 'auto' && s.homeLayout === 'minimal');
     return {
         gamePage: s.enabled,
         home: s.spotlightHome,
-        // The Clean look is built on the restyled page (its title, Play pill and accent), with or without Spotlight Home.
-        restyleDetails: s.enabled && (s.spotlightHome || s.cleanPage),
-        cleanDetails: s.enabled && s.cleanPage,
+        library: s.customLibrary,
+        restyleDetails: s.enabled,
+        minimalDetails,
+        cleanDetails: minimalDetails,
+        minimalLibrary,
     };
 }

@@ -4,15 +4,23 @@ export function isTopBarRect(rect: { top: number; height: number; width: number 
 }
 
 /**
- * Steam's top bar element, found from your avatar's holder (its classes are hashed, `avatarHolder` is the readable
- * one) and up to the strip across the screen; null when not found. Never throws.
+ * Steam's top bar element, checked via `#header` first (stable DOM id), then via `[class*="avatarHolder"]`,
+ * then via structural header/banner geometry scan; null when not found. Never throws.
  */
 export function findTopBar(doc: Document, viewportWidth: number): Element | null {
     try {
+        const header = doc.querySelector('#header');
+        if (header) {
+            const r = header.getBoundingClientRect();
+            if (r.top <= 2 && r.height > 0 && r.height <= 64) return header;
+        }
         let el: Element | null = doc.querySelector('[class*="avatarHolder"]');
         while (el) {
             if (isTopBarRect(el.getBoundingClientRect(), viewportWidth)) return el;
             el = el.parentElement;
+        }
+        for (const candidate of Array.from(doc.querySelectorAll('header, [role="banner"]'))) {
+            if (isTopBarRect(candidate.getBoundingClientRect(), viewportWidth)) return candidate;
         }
     } catch {
         // not found

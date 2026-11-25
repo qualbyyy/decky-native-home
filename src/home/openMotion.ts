@@ -65,32 +65,35 @@ export function openMotion(home: HomeRects, page: PageTargets, look: PageLook, c
     const d = page.d ?? s;
     const out: Record<string, string> = {};
 
-    // From the top-left origin, scaled by k: the title's bottom ends at y + h * k, which must be the page's bottom.
-    const tk = home.titleText ? PAGE_LAYOUT.titleBlock.title / TITLE_BLOCK.titleSize : 1;
+    const isMin = look === 'clean';
+    const pageTitleSize = isMin ? 44 : 56;
+    const tk = home.titleText ? pageTitleSize / TITLE_BLOCK.titleSize : 1;
     const titleMove = translate((page.titleBottomLeft.x - home.titleSlot.x) / s, (page.titleBottomLeft.y - (home.titleSlot.y + home.titleSlot.h * tk)) / s);
     out['--gho-title'] = tk === 1 ? titleMove : `${titleMove} scale(${k(tk)})`;
     out['--gho-eyebrow'] = translate((page.eyebrowBottomLeft.x - home.eyebrow.x) / s, (page.eyebrowBottomLeft.y - (home.eyebrow.y + home.eyebrow.h)) / s);
 
     // The page focuses its Play on arrival, and a focused Play grows about its centre (as Home's): the morph lands on it.
-    // (A focused pill grows by what a circle grows: 4% taller, as much wider in px; themeCss.pillFocusScale.) Not
-    // `focused` (opened in mouse mode, where the page shows no focus look): its size at rest.
-    const pf = focused ? pillFocusScale(PAGE_LAYOUT.playW, PAGE_LAYOUT.icon) : { x: 1, y: 1 };
+    const pagePlayW = isMin ? 216 : 264;
+    const pageIcon = isMin ? 46 : 52;
+    const pf = focused ? pillFocusScale(pagePlayW, pageIcon) : { x: 1, y: 1 };
     const to: Box = { x: page.play.x - (page.play.w * (pf.x - 1)) / 2, y: page.play.y - (page.play.h * (pf.y - 1)) / 2, w: page.play.w * pf.x, h: page.play.h * pf.y };
     // The pill itself only moves (by its left edge and centre line); its background layer, inside it, grows to the page
     // pill's size about that centre line, so the label never stretches.
     out['--gho-play-bg'] = `${translate(0, (home.play.h - to.h) / 2 / s)} scale(${k(to.w / home.play.w)}, ${k(to.h / home.play.h)})`;
-    // The page pill's exact box in the pill's own px (its round ends: the stretched layer's are oval), for the settle.
+    // The page pill's exact box in the pill's own px (its corners: the stretched layer scales cleanly), for the settle.
     out['--gho-play-sx'] = k(to.w / home.play.w);
     out['--gho-play-sy'] = k(to.h / home.play.h);
     out['--gho-play-dy'] = px((home.play.h - to.h) / 2 / s);
     out['--gho-play-fg'] = translate((to.x - home.play.x) / s, (to.y + to.h / 2 - (home.play.y + home.play.h / 2)) / s);
-    // Inside it (origin: its left edge and centre line), the glyph and the label grow to the page's and move to its insets
-    // (scaled with the focused pill).
-    const pill = PAGE_LAYOUT.pill;
+    // Inside it (origin: its left edge and centre line), the glyph and the label match Native Home's restyleRules.
+    const pillPadX = isMin ? 16 : 20;
+    const pillIcon = isMin ? 17 : 18;
+    const pillIconGap = 12;
+    const pillFont = isMin ? 17 : 19;
     // (Home's sit inside its 1 px border; the page's pill has none.)
     const homeInset = HOME_PILL.border + HOME_PILL.padX;
-    out['--gho-play-icon'] = `${translate(pill.padX * pf.x - homeInset, 0)} scale(${k((pill.icon * pf.x) / HOME_PILL.icon)}, ${k((pill.icon * pf.y) / HOME_PILL.icon)})`;
-    out['--gho-play-label'] = `${translate((pill.padX + pill.icon + pill.iconGap) * pf.x - (homeInset + HOME_PILL.icon + HOME_PILL.gap), 0)} scale(${k((pill.font * pf.x) / HOME_PILL.font)}, ${k((pill.font * pf.y) / HOME_PILL.font)})`;
+    out['--gho-play-icon'] = `${translate(pillPadX * pf.x - homeInset, 0)} scale(${k((pillIcon * pf.x) / HOME_PILL.icon)}, ${k((pillIcon * pf.y) / HOME_PILL.icon)})`;
+    out['--gho-play-label'] = `${translate((pillPadX + pillIcon + pillIconGap) * pf.x - (homeInset + HOME_PILL.icon + HOME_PILL.gap), 0)} scale(${k((pillFont * pf.x) / HOME_PILL.font)}, ${k((pillFont * pf.y) / HOME_PILL.font)})`;
     // A game on more than one device: Home's "Play from" segment, at the pill's right end (origin: its right edge and
     // centre line), moves with the pill's growth and grows onto the page's segment (its width, the page pill's height).
     out['--gho-play-arrow'] = `${translate((to.w - home.play.w) / s, 0)} scale(${k((PAGE_LAYOUT.playArrow.w * pf.x) / HOME_PILL.arrow)}, ${k(to.h / home.play.h)})`;

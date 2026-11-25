@@ -13,7 +13,7 @@ export { arrivalHoldMs } from './openArrival';
  * copy fade) and they fade in (hooks/openArrival). Null when there is no open to arrive from, once it is over, or when
  * the page has moved on to another game: the page is as always.
  */
-export function useOpenArrival(ref: RefObject<HTMLElement | null>, appId: number): { intent: OpenIntent; revealed: boolean } | null {
+export function useOpenArrival(ref: RefObject<HTMLElement | null>, appId: number, skipImg = false): { intent: OpenIntent; revealed: boolean } | null {
     const [opened] = useState(() => ({ appId, intent: openPending(appId) }));
     const intent = opened.appId === appId ? opened.intent : null;
     const [phase, setPhase] = useState<ArrivalPhase>(() => (opened.intent && opened.intent.look !== 'steam' ? 'hidden' : 'done'));
@@ -25,7 +25,7 @@ export function useOpenArrival(ref: RefObject<HTMLElement | null>, appId: number
         // Home drew the description as it opened: the page's must be there before Home's copy fades onto it.
         const sel = { ...pageArrivalSelectors(), desc: opened.intent.homeDesc ? '.gg-desc' : null };
         return runArrival({
-            ready: () => pageReady(ref.current?.ownerDocument as unknown as Parameters<typeof pageReady>[0], sel),
+            ready: () => pageReady(ref.current?.ownerDocument as unknown as Parameters<typeof pageReady>[0], sel, undefined, skipImg),
             now: () => Date.now(),
             frame: (cb) => win.requestAnimationFrame(cb),
             cancelFrame: (id) => win.cancelAnimationFrame(id as number),

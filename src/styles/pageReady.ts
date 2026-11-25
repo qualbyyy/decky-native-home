@@ -42,11 +42,13 @@ export function shownOnScreen(el: unknown): boolean {
     }
 }
 
-export function pageReady(doc: Doc | null | undefined, sel: ReadySelectors, shown: (el: Found) => boolean = shownOnScreen): boolean {
-    if (!doc || !sel.headerImg) return false;
+export function pageReady(doc: Doc | null | undefined, sel: ReadySelectors, shown: (el: Found) => boolean = shownOnScreen, skipImg = false): boolean {
+    if (!doc || (!skipImg && !sel.headerImg)) return false;
     try {
-        const img = doc.querySelector(sel.headerImg);
-        if (!img || img.complete !== true || !(Number(img.naturalWidth) > 0) || !shown(img)) return false;
+        if (!skipImg && sel.headerImg) {
+            const img = doc.querySelector(sel.headerImg);
+            if (!img || img.complete !== true || !(Number(img.naturalWidth) > 0) || !shown(img)) return false;
+        }
         const laidOut = (selector: string | null) => {
             const el = selector ? doc.querySelector(selector) : null;
             return !!el && el.getClientRects().length > 0;

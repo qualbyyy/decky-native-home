@@ -25,7 +25,6 @@ import { CARD_SCALE_HANDHELD, cardScaleFor, clampFocus, heroIndex, isLibraryFocu
 import { useFastCycle } from './fastCycle';
 import { noteDisplay } from './artShrink';
 import { canvasStyle, homeCanvas } from './scale';
-import { OpenExtras } from './OpenExtras';
 import { InlineChips, TitleBlock } from './TitleBlock';
 import { useBumperSelect, useDirectionSelect, useVerticalDirectionSelect } from './useBumperSelect';
 import { useHomeData } from './useHomeData';
@@ -425,7 +424,7 @@ export function SpotlightHome() {
     return (
         <div
             ref={rootRef}
-            className={`gh-root nh-layout-${homeLayout}${homeLayout === 'minimal' ? ` nh-side-${minimalSide}` : ''}${back ? ' gh-back' : ''}`}
+            className={`gh-root nh-layout-${homeLayout}${homeLayout === 'minimal' ? ` nh-side-${minimalSide}${!showHeroPanel ? ' nh-minimal-pure' : ''}` : ''}${back ? ' gh-back' : ''}`}
             onWheel={onRootWheel}
             style={{
                 '--glance-accent': accent,
@@ -445,12 +444,6 @@ export function SpotlightHome() {
             <div className="gh-scrim gh-scrim-dim" />
             <div className="gh-scrim gh-scrim-page" />
             <div className="gh-canvas" style={canvasStyle(canvas, logicalHeight, Boolean(size))}>
-                {showHeroPanel && (
-                    <>
-                        <div className="gh-open-shell" data-i="0" />
-                        <div className="gh-open-shell" data-i="1" />
-                    </>
-                )}
                 <div className="gh-safe">
                     <div className="gh-page">
                         {!contentUp ? null : game ? (
@@ -516,15 +509,6 @@ export function SpotlightHome() {
                     </div>
                 </div>
             </div>
-            {showHeroPanel && game && !cycle.holding && (
-                <OpenExtras
-                    description={data.description}
-                    hltb={data.hltb}
-                    playedMinutes={data.playedMinutes}
-                    locale={data.locale}
-                    playedMissing={data.focusedIsNew && inlineChips.some((c) => c.key === 'added')}
-                />
-            )}
         </div>
     );
 }

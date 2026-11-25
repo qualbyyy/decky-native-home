@@ -113,9 +113,9 @@ export function titleBlockLayout(lines: number): TitleBlockLayout {
 
 const px = (n: number) => `${n}px`;
 
-/** Friend pictures are squares with slightly rounded corners, as Steam draws avatars (about 4 px at 32 px). */
-export const AVATAR_RADIUS = 5;
-export const AVATAR_SMALL_RADIUS = 3;
+/** Friend pictures and UI shapes use strict square corners (0px). */
+export const AVATAR_RADIUS = 0;
+export const AVATAR_SMALL_RADIUS = 0;
 
 /** "#rrggbb" at an alpha, as rgba(). */
 export function hexAlpha(hex: string, alpha: number): string {
@@ -198,18 +198,18 @@ export function statusRules(): string[] {
             height: ${SOURCE_PILL.height}px; display: flex; align-items: center; gap: var(--gh-status-gap, ${STATUS_BAR.gap}px); margin: 0; padding: 0;
             pointer-events: none; z-index: 1; opacity: 1; transition: opacity ${STATUS_FADE_MS}ms ease;
             transform: scale(var(--gh-status-k, 1)); transform-origin: 100% 50%`),
-        rule('.gh-status-dot', `flex: 0 0 auto; width: ${PERSONA_DOT.size}px; height: ${PERSONA_DOT.size}px; margin: 0; padding: 0; border-radius: 50%;
+        rule('.gh-status-dot', `flex: 0 0 auto; width: ${PERSONA_DOT.size}px; height: ${PERSONA_DOT.size}px; margin: 0; padding: 0; border-radius: 0px;
             box-shadow: 0 0 0 2px rgba(12,16,22,.55), 0 1px 4px rgba(0,0,0,.4); transition: background ${ACCENT_MS}ms`),
         ...(Object.keys(PERSONA_DOT_COLOURS) as PersonaDot[]).map((dot) => rule(`.gh-status-dot-${dot}`, `background: ${PERSONA_DOT_COLOURS[dot]}`)),
         rule('.gh-status.gh-status-away', 'opacity: 0'),
         rule('.gh-status-pill', `display: inline-flex; align-items: center; gap: 14px; margin: 0; padding: 4px 10px; border: 1px solid var(--ctp-surface2, rgba(255,255,255,.12));
-            border-radius: var(--gruvbox-radius, 999px); color: rgba(255,255,255,.9); line-height: 1; white-space: nowrap; font-variant-numeric: tabular-nums;
+            border-radius: 0px; color: rgba(255,255,255,.9); line-height: 1; white-space: nowrap; font-variant-numeric: tabular-nums;
             background: var(--ctp-surface0, rgba(20,28,38,.88)); backdrop-filter: none; box-shadow: none; font-weight: 600`),
         rule('.gh-status-no-background .gh-status-pill', 'padding: 0; border-color: transparent; background: transparent'),
         rule('.gh-status-item', 'display: inline-flex; align-items: center; gap: 6px; margin: 0; padding: 0'),
         rule('.gh-status-item svg', 'flex: 0 0 auto; height: 18px; width: auto; display: block'),
-        // Your avatar in the pill (#9): a circle, ringed in your status colour (set inline), the pill grows to fit it.
-        rule('.gh-status-avatar', 'flex: 0 0 auto; width: 26px; height: 26px; box-sizing: border-box; border: 2px solid var(--gh-avatar-ring, #fff); border-radius: 50%; background-size: cover; background-position: center'),
+        // Your avatar in the pill (#9): square frame ringed in your status colour (set inline), the pill grows to fit it.
+        rule('.gh-status-avatar', 'flex: 0 0 auto; width: 26px; height: 26px; box-sizing: border-box; border: 2px solid var(--gh-avatar-ring, #fff); border-radius: 0px; background-size: cover; background-position: center'),
         rule('.gh-status-low', `color: ${CLOUD_COLOURS.bad}`),
         rule('.gh-status-offline svg', 'opacity: .6'),
     ];
@@ -245,13 +245,15 @@ export function homeCss(cardScale: number = CARD_SCALE_HANDHELD, options: { hide
         `@property --gh-card-accent { syntax: '<color>'; inherits: true; initial-value: ${DEFAULT_ACCENT}; }`,
         `@keyframes gh-fade-in { from { opacity: 0; } to { opacity: 1; } }`,
         rule('.gh-root', `--gh-side: ${SIDE_INSET.handheld}px; --gh-row: ${SIDE_INSET.handheld - ROW_OFFSET}px; --gh-pill: ${PILL_INSET.handheld}px; --glance-accent: ${DEFAULT_ACCENT}; --glance-accent-text: ${DEFAULT_ACCENT}; --gh-top: 52px; --gh-bottom: ${FEED_SHEET.legendReserve}px; --gh-shift: 0px; --gh-dim: 0;
-            --gh-ink: var(--ctp-base, #07090c); --gh-on-accent: var(--ctp-crust, #0b0d10); --gh-r-capsule: var(--gruvbox-radius, 0px); --gh-r-card: var(--gruvbox-radius, 0px); --gh-r-panel: var(--gruvbox-radius, 0px); --gh-r-pill: var(--gruvbox-radius, 0px);
+            --gh-ink: var(--ctp-base, #07090c); --gh-on-accent: var(--ctp-crust, #0b0d10); --gh-r-capsule: 0px; --gh-r-card: 0px; --gh-r-panel: 0px; --gh-r-pill: 0px;
             transition: none;
             position: absolute; inset: 0; overflow: hidden; overflow: clip; z-index: 0; background: var(--gh-ink); color: var(--ctp-text, #fff);
             font-family: inherit; text-align: left; line-height: normal; letter-spacing: normal; text-transform: none`),
         // A finger on Home is Home's own (home/useRowDrag, the sheet swipes): no browser panning or pull gestures.
         rule('.gh-root', 'touch-action: none'),
         rule('.gh-root *', 'box-sizing: border-box'),
+        rule('.gh-root img, .gh-cap::before, .gh-cap::after, .gh-card::before, .gh-card::after, .gh-btn::before, .gh-btn::after, .gh-chip::after', 'border-radius: 0px; outline: none'),
+        rule('.gh-btn:focus, .gh-btn.gpfocus, .gh-cap:focus, .gh-cap.gpfocus, .gh-card:focus, .gh-card.gpfocus', 'outline: none; border-radius: 0px'),
 
         // Hero art: full-bleed on the real screen (not the scaled canvas). Each new art fades in over the last.
         rule('.gh-hero', 'position: absolute; inset: 0; overflow: hidden; pointer-events: none'),
@@ -269,6 +271,8 @@ export function homeCss(cardScale: number = CARD_SCALE_HANDHELD, options: { hide
         rule('.gh-scrim', 'position: absolute; inset: 0; pointer-events: none'),
         rule('.gh-scrim-dim', 'background: transparent'),
         rule('.gh-scrim-page', 'background: linear-gradient(180deg, rgba(var(--ctp-base-rgb, 8, 11, 15), 0.45) 0px, transparent 84px), linear-gradient(90deg, rgba(var(--ctp-base-rgb, 5, 7, 10), 0.72) 0%, rgba(var(--ctp-base-rgb, 5, 7, 10), 0.28) 55%, transparent 78%), linear-gradient(0deg, rgba(var(--ctp-base-rgb, 8, 11, 15), 0.92) 0%, rgba(var(--ctp-base-rgb, 8, 11, 15), 0.56) 36%, transparent 64%); opacity: 1; display: block'),
+        rule('.gh-root.nh-minimal-pure.nh-side-left .gh-scrim-page', 'background: linear-gradient(180deg, rgba(var(--ctp-base-rgb, 8, 11, 15), 0.42) 0px, transparent 78px), linear-gradient(90deg, rgba(var(--ctp-base-rgb, 5, 7, 10), 0.84) 0%, rgba(var(--ctp-base-rgb, 5, 7, 10), 0.45) 28%, transparent 52%)'),
+        rule('.gh-root.nh-minimal-pure.nh-side-right .gh-scrim-page', 'background: linear-gradient(180deg, rgba(var(--ctp-base-rgb, 8, 11, 15), 0.42) 0px, transparent 78px), linear-gradient(270deg, rgba(var(--ctp-base-rgb, 5, 7, 10), 0.84) 0%, rgba(var(--ctp-base-rgb, 5, 7, 10), 0.45) 28%, transparent 52%)'),
 
         // Remove only Steam's native top-bar surface; QAM keeps its own blur and overlay.
         hideStatusBarBackground ? rule('#header', 'background: transparent; background-image: none') : '',
@@ -407,15 +411,15 @@ export function homeCss(cardScale: number = CARD_SCALE_HANDHELD, options: { hide
         rule('.gh-cap-lib', `border-radius: 0; background: var(--ctp-surface0, rgba(60,56,54,.67)); box-shadow: none; --gh-edge: transparent`),
         rule('.gh-cap-lib.gh-cap-lib-on', `--gh-edge: var(--ctp-accent-color, var(--glance-accent, #1a9fff)); box-shadow: none`),
         rule('.gh-cap-lib.gh-cap-lib-on::after', `box-shadow: inset 0 0 0 2px var(--ctp-accent-color, var(--glance-accent, #1a9fff))`),
-        rule('.gh-lib-body', `position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: ${k(16)}px;
+        rule('.gh-lib-body', `position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: ${k(14)}px ${k(12)}px;
             text-align: center; background: transparent; backdrop-filter: none`),
-        rule('.gh-lib-label', `font-size: ${k(16)}px; font-weight: 500; letter-spacing: normal; text-transform: none; line-height: 1.25; text-wrap: balance; color: var(--ctp-text, #fff)`),
+        rule('.gh-lib-label', `max-width: 100%; overflow-wrap: break-word; font-size: ${k(13.5)}px; font-weight: 500; letter-spacing: normal; text-transform: none; line-height: 1.25; text-wrap: balance; color: var(--ctp-text, #fff)`),
         // Loop preview: the first games again, decorative only (not focusable).
         // Opacity is inline per ghost (recentsLayout.ghostOpacity): .4 (.55 on the Library card) fading to .08.
         rule('.gh-ghost', 'cursor: default; --gh-edge: rgba(255,255,255,.06); box-shadow: none; filter: grayscale(.6) brightness(.75)'),
         rule('.gh-ghost.gh-cap-off', 'filter: grayscale(1) brightness(.65)'),
         rule('.gh-ghost-badge', `position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: ${k(6)}px; background: rgba(5,7,10,.45)`),
-        rule('.gh-ghost-icon', `width: ${k(36)}px; height: ${k(36)}px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: ${k(20)}px; font-weight: 700; line-height: 1; background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.35); color: #fff`),
+        rule('.gh-ghost-icon', `width: ${k(36)}px; height: ${k(36)}px; border-radius: 0px; display: flex; align-items: center; justify-content: center; font-size: ${k(20)}px; font-weight: 700; line-height: 1; background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.35); color: #fff`),
         rule('.gh-ghost-label', `font-size: ${k(9.5)}px; font-weight: 800; letter-spacing: .18em; line-height: 1.2; text-align: center; color: #fff`),
         rule('.gh-btn-library', `width: 260px; flex: 0 0 260px; height: ${ACTION_H}px; background: var(--ctp-accent-color, #1a9fff); border-color: var(--ctp-accent-color, #1a9fff); color: var(--ctp-crust, #fff)`),
 
@@ -441,7 +445,7 @@ export function homeCss(cardScale: number = CARD_SCALE_HANDHELD, options: { hide
             line-height: 1.2; white-space: nowrap; color: rgba(255,255,255,.6); background: transparent; outline: none; cursor: pointer; transition: color 200ms`),
         rule('.gh-tab.gh-tab-on', 'color: #fff'),
         rule(`${HOVER} .gh-tab:hover:not(.gh-tab-on)`, 'color: rgba(255,255,255,.85)'),
-        rule('.gh-tab-line', `position: absolute; left: 0; right: 0; bottom: 0; height: 3px; border-radius: 2px; background: var(--glance-accent); opacity: 0; box-shadow: none;
+        rule('.gh-tab-line', `position: absolute; left: 0; right: 0; bottom: 0; height: 3px; border-radius: 0px; background: var(--glance-accent); opacity: 0; box-shadow: none;
             transition: opacity 250ms, box-shadow 250ms, background ${ACCENT_MS}ms`),
         rule('.gh-tab.gh-tab-on .gh-tab-line', 'opacity: .55'),
         // The tabs are out of sight while the sheet is down: their line takes a new accent at once.
@@ -595,12 +599,12 @@ export function openingRules(): string[] {
         // on the Ally: moving blurred felt more seamless than a blur growing in after the hand-over). 16 canvas px is the page's
         // 16 d units. Its ring is Home's 1px, so it looks like the chips' all the way: Chromium snaps a border to whole device px
         // in the canvas's own units, before the scale, so the page's 1 device px drawn in here came out half as bright on the Ally.
-        rule('.gh-open-shell', 'display: none; position: absolute; left: 0; top: 0; margin: 0; padding: 0; pointer-events: none; transform-origin: 0 0; border-radius: var(--gruvbox-radius, 8px); background: var(--ctp-surface0, rgba(20,28,38,.85)); border: 1px solid var(--ctp-surface2, rgba(255,255,255,.14)); backdrop-filter: none'),
+        rule('.gh-open-shell', 'display: none; position: absolute; left: 0; top: 0; margin: 0; padding: 0; pointer-events: none; transform-origin: 0 0; border-radius: 0px; background: var(--ctp-surface0, rgba(20,28,38,.85)); border: 1px solid var(--ctp-surface2, rgba(255,255,255,.14)); backdrop-filter: none'),
         // A Unifideck game's page has a fourth circle (Uninstall) Home has no button for: one is drawn at its place as Home's
         // circles look at the page's size, and fades in late as the page's other parts do, so it does not pop in after the
         // hand-over. Its own fade, not the extras layer's: a backdrop blur inside a fading parent sees nothing behind it.
         rule('.gh-open-circle', `display: none; position: absolute; left: 0; top: 0; margin: 0; padding: 0; pointer-events: none; box-sizing: border-box; aspect-ratio: 1;
-            align-items: center; justify-content: center; border-radius: 999px; color: #fff; background: rgba(12,16,22,.4); border: 1px solid rgba(255,255,255,.18);
+            align-items: center; justify-content: center; border-radius: 0px; color: #fff; background: rgba(12,16,22,.4); border: 1px solid rgba(255,255,255,.18);
             backdrop-filter: blur(12px); opacity: 0`),
         rule('.gh-open-circle svg', `width: ${PAGE_LAYOUT.circleIcon}px; height: ${PAGE_LAYOUT.circleIcon}px; margin: 0; fill: currentColor`),
         rule(`${M} .gh-open-circle`, 'display: flex; left: calc(var(--gho-circle-extra-x) * 1px); top: calc(var(--gho-circle-extra-y) * 1px); width: calc(var(--gho-circle-extra-w) * 1px)'),
@@ -628,11 +632,11 @@ export function openingRules(): string[] {
         // Morph: the movers, from their own place (origin top-left, as openMotion computes).
         rule([`${M} .gh-title-slot`, `${M} .gh-eyebrow`, `${M} .gh-source`, `${M} .gh-actions > .gh-btn`, `${M} .gh-chip-label`, `${M} .gh-chip-value`].join(', '), 'transform-origin: 0 0'),
         rule(`${MT} .gh-title-slot`, `transform: var(--gho-title); transition: ${move}`),
-        rule(`${MT} .gh-eyebrow`, `transform: var(--gho-eyebrow); transition: ${move}`),
+        rule(`${MT} .gh-eyebrow`, `opacity: 0; transition: opacity ${T.infoFade}ms ease`),
         rule(`${MT} .gh-source`, `transform: var(--gho-store); transition: ${move}`),
         // The Play pill moves; its accent background becomes a layer inside it that grows to the page pill (the pill
         // stops clipping it, and keeps its focus ring on that layer).
-        rule(`${M} ${play}`, 'overflow: visible; background: transparent; border-color: transparent; box-shadow: none'),
+        rule(`${M} ${play}`, 'overflow: visible; background: transparent; border-color: transparent; box-shadow: none; color: var(--ctp-crust, #0b0f14)'),
         // (Both layers start at the pill's outer edge, its 1px border, as openMotion's scales are of its outer size: from inside
         // the border they ended a border's width short all round, and the page pill grew at the hand-over.)
         rule(`${M} ${play}::before`, "content: ''; position: absolute; left: -1px; top: -1px; width: calc(100% + 2px); height: calc(100% + 2px); border-radius: var(--gh-r-pill); background: var(--ctp-accent-color, var(--glance-accent)); transform-origin: 0 0; pointer-events: none"),
@@ -732,11 +736,11 @@ export function openingRules(): string[] {
         // The page's store pill (and family pill in it), right-aligned where the page draws it, as themeCss draws .gg-pill
         // and .gg-family; Home's own (moving, scaled) fades out as it fades in.
         rule(`${X} .gh-x-pill`, `display: none; position: absolute; left: var(--gho-x-pill-x); top: var(--gho-x-pill-y); transform: translateX(-100%); align-items: center;
-            border-radius: 999px; border: 1px solid; color: #fff; white-space: nowrap; ${sourcePillLook(dd)}`),
+            border-radius: 0px; border: 1px solid; color: #fff; white-space: nowrap; ${sourcePillLook(dd)}`),
         rule('.gh-root[data-gh-extras~="pills"] .gh-x-pill', 'display: inline-flex'),
         rule(`${X} .gh-x-pill-icon`, `flex: 0 0 auto; ${sourcePillIcon(dd)}`),
         rule(`${X} .gh-x-family`, `position: absolute; right: calc(100% + ${dd(10)}); top: 50%; transform: translateY(-50%); display: inline-flex; align-items: center;
-            margin: 0; border-radius: 999px; border: 1px solid; color: #fff; line-height: 1; white-space: nowrap; ${sourcePillLook(dd)}`),
+            margin: 0; border-radius: 0px; border: 1px solid; color: #fff; line-height: 1; white-space: nowrap; ${sourcePillLook(dd)}`),
         rule(`${X} .gh-x-family-icon`, `flex: 0 0 auto; ${sourcePillIcon(dd)}`),
         // A new game's Play time column (Home shows its Added chip instead), as the page draws it, at its place.
         rule(`${X} .gh-x-played`, `display: none; position: absolute; ${inCard('played')}; flex-direction: column; gap: ${dd(L.stats.rowGap)}`),
@@ -752,14 +756,18 @@ export function openingRules(): string[] {
         rule(`${X} .gh-x-stats > div`, `display: flex; flex-direction: column; gap: ${dd(L.stats.rowGap)}`),
         rule(`${X} .gh-x-value`, `font-size: ${dd(L.stats.value)}; font-weight: 700; line-height: ${PAGE_LINES.value}; white-space: nowrap; color: var(--ctp-text, #fff)`),
         rule(`${X} .gh-x-stats > div:first-child .gh-x-value`, 'visibility: hidden'),
-        rule(`${X} .gh-x-bar`, `height: ${dd(L.cardText.bar)}; border-radius: ${dd(3)}; background: rgba(255,255,255,.14); overflow: hidden`),
-        rule(`${X} .gh-x-bar > div`, `height: 100%; border-radius: ${dd(3)}; background: var(--ctp-accent-color, var(--glance-accent))`),
+        rule(`${X} .gh-x-bar`, `height: ${dd(L.cardText.bar)}; border-radius: 0px; background: rgba(255,255,255,.14); overflow: hidden`),
+        rule(`${X} .gh-x-bar > div`, `height: 100%; border-radius: 0px; background: var(--ctp-accent-color, var(--glance-accent))`),
         rule(`${X} .gh-x-caption`, `font-size: ${dd(L.cardText.caption)}; line-height: ${PAGE_LINES.caption}; color: var(--ctp-subtext0, rgba(255,255,255,.72))`),
         rule('.gh-source, .gh-family, .gh-x-pill, .gh-x-family', 'display: none'),
 
-        // heroFade and fade: the opened game's hero over Home's (heroFade), Home's UI fading as one.
+        // heroFade and fade: keep hero art rock-solid without zoom snap, glide lists/recents directionally off-screen.
+        rule('.gh-root[data-gh-opening="fade"] :is(.gh-open-shell, .gh-open-circle, .gh-open-extras), .gh-root[data-gh-opening="heroFade"] :is(.gh-open-shell, .gh-open-circle, .gh-open-extras)', 'display: none; opacity: 0'),
         rule('.gh-root[data-gh-opening="heroFade"][data-gh-phase="to"] .gh-hero-open', `opacity: 1; transition: opacity ${T.feedHero}ms ease`),
-        rule(FADES.map((f) => `${f} .gh-page`).join(', '), `opacity: 0; transition: opacity ${T.feedUi}ms ease`),
+        rule(FADES.map((f) => `${f}.nh-side-left .nh-min-list`).join(', '), `transform: translateX(-56px); opacity: 0; transition: transform 240ms cubic-bezier(.22, 1, .36, 1), opacity ${T.feedUi}ms ease`),
+        rule(FADES.map((f) => `${f}.nh-side-right .nh-min-list`).join(', '), `transform: translateX(56px); opacity: 0; transition: transform 240ms cubic-bezier(.22, 1, .36, 1), opacity ${T.feedUi}ms ease`),
+        rule(FADES.map((f) => `${f} .gh-recents`).join(', '), `transform: translateY(64px); opacity: 0; transition: transform 240ms cubic-bezier(.4, 0, 1, 1), opacity ${T.feedUi}ms ease`),
+        rule(FADES.map((f) => `${f} .gh-title-block`).join(', '), `transform: translateY(18px); opacity: 0; transition: transform ${T.feedUi}ms ease, opacity ${T.feedUi}ms ease`),
     ];
 }
 

@@ -4,6 +4,7 @@ import { attempt } from '../data/attempt';
 import { cache, TTL } from '../data/cache';
 import { lookupHltb } from '../data/hltb';
 import { settings } from '../data/settings';
+import { homeMode } from './mode';
 import { getShortcutDescription } from '../data/shortcutDescription';
 import { getDescription, getSteamLanguage } from '../data/steam';
 import type { HeroicRef } from '../logic/heroic';
@@ -109,7 +110,7 @@ export function useWarmup(games: WarmGame[], centre: number, ready: boolean, inf
             };
             // The Clean look shows no description: none to warm.
             const descriptions = async () => {
-                if (settings.get().cleanPage) return;
+                if (homeMode(settings.get()).minimalDetails) return;
                 const lang = await attempt('Steam language', () => getSteamLanguage(), 'english');
                 await warmDescriptions(ordered.map((g) => ({ appId: g.appId, name: g.name, isShortcut: shortcut(g.appId) })), lang, descriptionDeps, isCancelled, changed);
             };
