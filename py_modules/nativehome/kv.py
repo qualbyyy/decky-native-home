@@ -14,23 +14,31 @@ class KvStore:
         self._lock = threading.Lock()
         self._data: dict[str, Any] | None = None
 
-    def _load(self) -> dict[str, Any]:
+    def _load(self, *, strict: bool = False) -> dict[str, Any]:
         if self._data is None:
             try:
                 with open(self._path, encoding="utf-8") as f:
                     data = json.load(f)
                 self._data = data if isinstance(data, dict) else {}
-            except (OSError, ValueError):
+            except FileNotFoundError:
                 self._data = {}
+            except OSError:
+                if strict:
+                    raise
+                return {}
+            except ValueError:
+                return {}
         return self._data
 
-    def _save(self) -> None:
+    def _save(self, data: dict[str, Any]) -> None:
         directory = os.path.dirname(self._path) or "."
         os.makedirs(directory, exist_ok=True)
         fd, tmp = tempfile.mkstemp(dir=directory, prefix=".kv-", suffix=".tmp")
         try:
             with os.fdopen(fd, "w", encoding="utf-8") as f:
-                json.dump(self._data, f)
+                json.dump(data, f)
+                f.flush()
+                os.fsync(f.fileno())
             os.replace(tmp, self._path)
         except BaseException:
             try:
@@ -45,22 +53,26 @@ class KvStore:
 
     def set(self, key: str, value: Any) -> None:
         with self._lock:
-            self._load()[key] = value
-            self._save()
+            next_data = dict(self._load(strict=True))
+            next_data[key] = value
+            self._save(next_data)
+            self._data = next_data
 
     def delete(self, key: str) -> None:
         with self._lock:
-            data = self._load()
+            data = self._load(strict=True)
             if key in data:
-                del data[key]
-                self._save()
+                next_data = dict(data)
+                del next_data[key]
+                self._save(next_data)
+                self._data = next_data
 
     def delete_prefix(self, prefix: str) -> int:
         with self._lock:
-            data = self._load()
+            data = self._load(strict=True)
             keys = [k for k in data if k.startswith(prefix)]
-            for k in keys:
-                del data[k]
             if keys:
-                self._save()
+                next_data = {k: v for k, v in data.items() if not k.startswith(prefix)}
+                self._save(next_data)
+                self._data = next_data
             return len(keys)

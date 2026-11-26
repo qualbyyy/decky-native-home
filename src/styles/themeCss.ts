@@ -1,4 +1,5 @@
 import { DOWNLOAD_FILL_COLOR, DOWNLOAD_FILL_MS } from './downloadFill';
+import { heroPositionCss, type HeroPosition } from '../data/settings';
 import { hoverRing, MOUSE_ATTR, NOT_MOUSE } from '../home/mouseMode';
 import { DEFAULT_ACCENT, legibleAccent } from '../home/accent';
 import { CLOUD_COLOURS, CLOUD_FOCUS_BAD } from '../home/cloud';
@@ -219,6 +220,8 @@ export interface ThemeOptions {
     hideCover?: boolean;
     /** Remove Steam's native top-bar background while keeping the status icons and QAM intact. */
     hideStatusBarBackground?: boolean;
+    /** Hero art alignment, matched with Spotlight Home and CustomLibrary. */
+    heroPosition?: HeroPosition;
 }
 
 /**
@@ -285,7 +288,7 @@ export function buildThemeCss(classes: ThemeClasses, options: ThemeOptions = {})
             --gg-side: 2.8vw;
         }`,
         // Our elements (stacked fallback position; the layout below overlays them).
-        `.gg-hero { position: relative; margin: 1vh var(--gg-side); font-family: inherit; color: #fff; }`,
+        `.gg-hero { position: relative; margin: 1vh var(--gg-side); font-family: inherit; color: var(--ctp-text, #fff); }`,
         `.gg-cards { display: flex; gap: ${u(14)}; align-items: stretch; }`,
         `.gg-card { flex: 1 1 0; min-width: 0; background: var(--gg-glass); border: 1px solid var(--gg-border);
             border-radius: 0; padding: ${u(9)} ${u(12)}; backdrop-filter: blur(${u(10)}); }`,
@@ -319,7 +322,7 @@ export function buildThemeCss(classes: ThemeClasses, options: ThemeOptions = {})
             border-radius: 0 !important; outline: none !important; overflow: hidden !important; background: var(--gg-accent) !important; box-shadow: none !important; `),
         rule(playButton && `${playButton} [role="button"]`, ` background: transparent !important; border-radius: 0 !important; outline: none !important; width: auto !important;
             flex: 1 1 auto !important; min-width: 0 !important; min-height: 0 !important; height: 100% !important; overflow: hidden !important;
-            white-space: nowrap !important; text-overflow: ellipsis !important; color: #ffffff !important;
+            white-space: nowrap !important; text-overflow: ellipsis !important; color: var(--ctp-crust, #ffffff) !important;
             font-size: ${u(16)} !important; padding: ${u(8)} ${u(16)} !important; `),
         rule(playButton && `${playButton} [role="button"] > div`, ` font-size: ${u(16)} !important; `),
         rule(playButton && `${playButton} [role="button"] + [role="button"]`, ` flex: 0 0 ${u(38)} !important; width: ${u(38)} !important; padding: 0 !important;
@@ -329,7 +332,7 @@ export function buildThemeCss(classes: ThemeClasses, options: ThemeOptions = {})
         rule(appButtons && `${appButtons} > *`, ` margin: 0 !important; padding: 0 !important; `),
         rule(menuButton, ` width: var(--gg-icon) !important; height: var(--gg-icon) !important; min-width: 0 !important; margin: 0 !important; box-sizing: border-box !important; border-radius: 0 !important; outline: none !important;
             background: rgba(255, 255, 255, 0.08) !important; border: 1px solid rgba(255, 255, 255, 0.18) !important; `),
-        rule(menuButton && `${NOT_MOUSE} ${menuButton}.gpfocus`, ` background: #ffffff !important; color: #0b0f14 !important; outline: none !important; border-radius: 0 !important; `),
+        rule(menuButton && `${NOT_MOUSE} ${menuButton}.gpfocus`, ` background: var(--ctp-text, #ffffff) !important; color: var(--ctp-crust, #0b0f14) !important; outline: none !important; border-radius: 0 !important; `),
         // Steam's own icons and row padding, scaled like the rest (Steam sizes them in fixed pixels).
         rule(playButton && menuButton && [`${playButton} svg`, `${menuButton} svg`], ` width: ${u(24)} !important; height: ${u(24)} !important; `),
         rule(playButton && `${playButton} [role="button"] svg`, ` margin-right: ${u(16)} !important; `),
@@ -390,11 +393,22 @@ export function buildThemeCss(classes: ThemeClasses, options: ThemeOptions = {})
     }
 
     if (layout) {
+        const heroPos = heroPositionCss(options.heroPosition ?? 'center');
+        const heroImages = present([
+            headerImgSrc,
+            headerFallbackArt,
+            headerBackground && `${headerBackground} img`,
+            headerBackgroundImage && `${headerBackgroundImage} img`,
+            topCapsule && (titleImage ? `${topCapsule} img:not(${titleImage} img)` : `${topCapsule} > img`),
+        ]);
         rules.push(
             // The Play row's top, measured from the bottom so the row and cards sit at the bottom of any screen
             // (205px = 44vh down on the handheld; on a TV the art above gets the extra room).
             `:root { --gg-play-top: calc(100vh - ${u(261)}); }`,
             rule(topCapsule, ` height: 100vh !important; min-height: 0 !important; `),
+            heroImages.length
+                ? rule(heroImages, ` object-fit: cover !important; object-position: ${heroPos} !important; transform: none !important; `)
+                : '',
             rule(`${topCapsule}::after`, ` content: ''; position: absolute; inset: 0; pointer-events: none;
                 background: ${SCRIM_BOTTOM},
                             ${SCRIM_LEFT}; `),
@@ -480,7 +494,7 @@ export function buildUnifideckCss({ header, details, root }: ThemeClasses, optio
         options.restyle ? rule(primary, ` text-transform: none !important; letter-spacing: normal !important; justify-content: flex-start !important; gap: 0 !important; padding: 0 ${d(options.minimal ? 16 : 20)} !important; `) : '',
         options.restyle ? rule('.unifideck-icon-btn svg.unifideck-cloud-badge', ` width: ${d(13)} !important; height: ${d(13)} !important; `) : '',
         options.restyle ? rule(primary.map((p) => `${p} svg`), ` width: ${d(options.minimal ? 17 : 18)} !important; height: ${d(options.minimal ? 17 : 18)} !important; margin: 0 ${d(12)} 0 0 !important; flex: 0 0 auto !important; `) : '',
-        options.restyle ? rule(focused, ` box-shadow: 0 0 0 ${d(2)} var(--ctp-accent-color, rgba(255, 255, 255, 0.9)), 0 ${d(10)} ${d(28)} calc(-1 * ${d(6)}) var(--gg-accent) !important; transform: scale(${PILL_FOCUS.x}, ${PILL_FOCUS.y}) !important; `) : '',
+        options.restyle ? rule(focused, ` box-shadow: 0 0 0 ${d(2)} var(--ctp-accent-color, rgba(255, 255, 255, 0.9)), 0 ${d(10)} ${d(28)} calc(-1 * ${d(6)}) var(--gg-accent) !important; transform: scale(${PILL_FOCUS.x}, ${PILL_FOCUS.y}); `) : '',
     ].filter((r) => r.length > 0).join('\n');
 }
 
@@ -574,7 +588,7 @@ export function twinTargets({ root }: ThemeClasses, look: 'spotlight' | 'clean' 
     out[SETTLE.hltbTitle] = '.gg-hltb > .gg-label';
     out[SETTLE.caption] = '.gg-hltb .gg-caption';
     out[SETTLE.muted] = '.gg-hltb .gg-muted';
-    out[SETTLE.desc] = '.gg-hero .gg-desc';
+    out[SETTLE.desc] = '.nh-gv-desc, .gg-hero .gg-desc';
     for (const k of ['hltb', 'mainExtras', 'completionist']) {
         out[SETTLE.label(k)] = `.gg-hltb [data-stat="${k}"] .gg-label`;
         out[SETTLE.value(k)] = `.gg-hltb [data-stat="${k}"] .gg-value`;
@@ -615,7 +629,7 @@ export function buildLaunchCss(classes: ThemeClasses): string {
     const { overlay, hide } = launchTargets(classes);
     if (!overlay) return '';
     return [
-        `${hide.join(', ')} { opacity: 0 !important; transition: opacity ${LAUNCH_FADE_MS}ms ease !important; }`,
+        `${hide.join(', ')} { opacity: 0; transition: opacity ${LAUNCH_FADE_MS}ms ease; }`,
         `:root ${overlay} { background: rgba(0, 0, 0, 0.55) !important; }`,
     ].join('\n');
 }
@@ -633,7 +647,7 @@ function restyleRules({ header, details, root, play, shared, feedback }: ThemeCl
     const titleGap = minimal ? 20 : 24;
     const btnRadius = '0px';
     const playFocus = pillFocusScale(playW, icon);
-    const pillFocused = ` box-shadow: 0 0 0 ${d(2)} var(--ctp-accent-color, rgba(255, 255, 255, 0.92)) !important; transform: scale(${playFocus.x}, ${playFocus.y}) !important; `;
+    const pillFocused = ` box-shadow: 0 0 0 ${d(2)} var(--ctp-accent-color, rgba(255, 255, 255, 0.92)) !important; transform: scale(${playFocus.x}, ${playFocus.y}); `;
     const topCapsule = cls(header, 'TopCapsule');
     const titleImage = cls(header, 'TitleImageContainer');
     const svgTitle = cls(header, 'SVGTitle');
@@ -778,7 +792,6 @@ function restyleRules({ header, details, root, play, shared, feedback }: ThemeCl
     const tabs = cls(root, 'AppDetailsContainer');
     if (layout) {
         rules.push(
-            rule(topCapsule && `${topCapsule} img`, ` object-position: 50% 30% !important; `),
             rule(`${inner} > .gg-titleblock`, ` display: flex !important; position: absolute !important; top: calc(var(--gg-play-top) - ${d(titleGap)}) !important;
                 transform: translateY(-100%) !important; left: var(--gg-side) !important; right: var(--gg-side) !important; margin: 0 !important; `),
             rule(titleImage && `${inner}:has(> .gg-titleblock) ${topCapsule} ${titleImage}`, ` visibility: hidden !important; `),
@@ -820,11 +833,11 @@ export function buildArrivingCss(
     const steamFade = buildSteamEnterOffCss(classes);
     const body = revealed
         ? mode === 'all'
-            ? ` opacity: 1 !important; translate: 0 0 !important; transition: opacity ${ARRIVE_MS}ms ease, translate ${ARRIVE_MS}ms cubic-bezier(.2,.8,.2,1) !important; `
-            : ` opacity: 1 !important; transition: opacity ${ARRIVE_MS}ms ease !important; `
+            ? ` opacity: 1; translate: 0 0; transition: opacity ${ARRIVE_MS}ms ease, translate ${ARRIVE_MS}ms cubic-bezier(.2,.8,.2,1); `
+            : ` opacity: 1; transition: opacity ${ARRIVE_MS}ms ease; `
         : mode === 'all'
-            ? ` opacity: 0 !important; translate: 0 ${ARRIVE_RISE_PX}px !important; `
-            : ' opacity: 0 !important; ';
+            ? ` opacity: 0; translate: 0 ${ARRIVE_RISE_PX}px !important; `
+            : ' opacity: 0; ';
     // Steam fades its focus look onto Play (background and colour, 200 ms) as it focuses it, after the page is ready;
     // Home's copy already shows Play focused, so the page's must be lit at once.
     const playButton = cls(root, 'ActionButtonAndStatusPanel');

@@ -50,9 +50,15 @@ class HeroicLibrary:
         }
 
     def description(self, runner: str, app_name: str) -> str | None:
-        for cache in self._files.get(runner, []):
+        if not isinstance(runner, str) or not isinstance(app_name, str):
+            return None
+        runner_key = runner.strip().lower()
+        target = app_name.strip()
+        if not runner_key or not target:
+            return None
+        for cache in self._files.get(runner_key, []):
             for entry in _entries(cache.get()):
-                if str(entry.get("app_name")) == app_name:
+                if str(entry.get("app_name", "")) == target:
                     text = _description(entry)
                     if text:
                         return text

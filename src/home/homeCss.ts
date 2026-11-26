@@ -1,4 +1,5 @@
 import { DOWNLOAD_FILL_COLOR, DOWNLOAD_FILL_MS } from '../styles/downloadFill';
+import { heroPositionCss, type HeroPosition } from '../data/settings';
 import { withDomFocus } from './focusCss';
 import { DEFAULT_ACCENT } from './accent';
 import { SOURCE_PILL, sourcePillIcon, sourcePillLook } from '../styles/sourcePill';
@@ -234,12 +235,16 @@ export function statusCss(): string {
  * Handoff tokens: ink #07090c, scrim rgb(5,7,10), glass rgba(12,16,22,.38) + blur(14px), radii 8/12/16/999.
  * `cardScale` sizes the recents row (recentsLayout.recentsGeometry: 1.3 handheld, 1.6 docked).
  */
-export function homeCss(cardScale: number = CARD_SCALE_HANDHELD, options: { hideStatusBarBackground?: boolean } = {}): string {
+export function homeCss(
+    cardScale: number = CARD_SCALE_HANDHELD,
+    options: { hideStatusBarBackground?: boolean; heroPosition?: HeroPosition } = {},
+): string {
     const geo = recentsGeometry(cardScale);
     const k = geo.fine;
     const capShadow = `0 ${k(6)}px ${k(20)}px -${k(10)}px rgba(0,0,0,.6)`;
     const t = TITLE_BLOCK;
     const hideStatusBarBackground = options.hideStatusBarBackground !== false;
+    const heroPos = heroPositionCss(options.heroPosition ?? 'center');
     return [
         `@property --glance-accent { syntax: '<color>'; inherits: true; initial-value: ${DEFAULT_ACCENT}; }`,
         `@property --gh-card-accent { syntax: '<color>'; inherits: true; initial-value: ${DEFAULT_ACCENT}; }`,
@@ -261,9 +266,9 @@ export function homeCss(cardScale: number = CARD_SCALE_HANDHELD, options: { hide
         // A layer whose fade a newer switch interrupted: shown at once (HeroBackground keeps at most two layers).
         rule('.gh-hero-layer.gh-hero-settled', 'animation: none; opacity: 1'),
         rule('.gh-hero-none', 'background: var(--gh-ink)'),
-        rule('.gh-hero-full', 'position: absolute; inset: 0; background-size: cover; background-position: center 30%; background-repeat: no-repeat'),
+        rule('.gh-hero-full', `position: absolute; inset: 0; background-size: cover; background-position: ${heroPos}; background-repeat: no-repeat`),
         rule('.gh-hero-blur', 'position: absolute; inset: -60px; background-size: cover; background-position: center; filter: blur(42px) saturate(1.25) brightness(.8)'),
-        rule('.gh-hero-sharp', `position: absolute; right: 0; top: 0; height: 100%; width: 62%; background-size: cover; background-position: center 30%;
+        rule('.gh-hero-sharp', `position: absolute; right: 0; top: 0; height: 100%; width: 62%; background-size: cover; background-position: ${heroPos};
             background-repeat: no-repeat; opacity: .92;
             -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 45%); mask-image: linear-gradient(90deg, transparent 0%, #000 45%)`),
 
@@ -305,6 +310,7 @@ export function homeCss(cardScale: number = CARD_SCALE_HANDHELD, options: { hide
             object-fit: contain; object-position: left bottom; align-self: flex-start; filter: drop-shadow(0 4px 24px rgba(0,0,0,.45))`),
         // Play + stat chips on one equal-height horizontal row
         rule('.gh-action-bar', 'display: flex; align-items: stretch; gap: 10px; margin: 4px 0 0 0; padding: 0; flex-wrap: nowrap'),
+        rule('.gh-root.nh-layout-minimal .gh-action-bar', 'flex-wrap: wrap'),
         rule('.gh-chips', `display: flex; align-items: stretch; gap: 10px; height: ${ACTION_H}px; flex: 0 0 auto; margin: 0; padding: 0`),
         rule('.gh-chip', `position: relative; height: ${ACTION_H}px; display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 0 14px; min-width: 108px; border-radius: var(--gh-r-pill); overflow: hidden; ${GLASS}`),
         rule('.gh-chip-label', 'font-size: 9.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; line-height: 1.1; color: var(--ctp-subtext0, rgba(255,255,255,.65)); white-space: nowrap'),
@@ -319,7 +325,7 @@ export function homeCss(cardScale: number = CARD_SCALE_HANDHELD, options: { hide
         rule('.gh-family', 'display: none; width: 0; height: 0; margin: 0; padding: 0; visibility: hidden'),
         rule('.gh-family-icon', `flex: 0 0 auto; ${sourcePillIcon(px)}`),
         ...statusRules(),
-        ...openingRules(),
+        ...openingRules(heroPos),
         // Actions: equal height with inline stat chips
         rule('.gh-actions', 'display: flex; align-items: stretch; gap: 10px; margin: 0; padding: 0; flex: 0 0 auto'),
         rule('.gh-btn', `height: ${ACTION_H}px; min-width: 0; margin: 0; padding: 0; border-radius: var(--gh-r-pill); display: flex; align-items: center; justify-content: center; gap: 12px;
@@ -331,7 +337,7 @@ export function homeCss(cardScale: number = CARD_SCALE_HANDHELD, options: { hide
         rule('.gh-steam-icon svg', `width: ${PAGE_LAYOUT.circleIcon}px; height: ${PAGE_LAYOUT.circleIcon}px; margin: 0; fill: currentColor`),
         rule('.gh-btn-cloud svg', `width: ${PAGE_LAYOUT.cloudIcon}px; height: ${PAGE_LAYOUT.cloudIcon}px; margin: 0; fill: currentColor`),
         ...(Object.keys(CLOUD_COLOURS) as CloudTone[]).map((tone) => rule(`.gh-btn-cloud.gh-cloud-${tone}`, `color: ${CLOUD_COLOURS[tone]}`)),
-        rule('.gh-btn-cloud.gh-cloud-uni', 'color: #fff'),
+        rule('.gh-btn-cloud.gh-cloud-uni', 'color: var(--ctp-text, #fff)'),
         rule('.gh-btn-cloud.gh-cloud-uni svg', `width: ${PAGE_LAYOUT.circleIcon}px; height: ${PAGE_LAYOUT.circleIcon}px; filter: none`),
         rule('.gh-btn-cloud.gh-cloud-uni:not(.gh-focus)', 'box-shadow: 0 0 0 2px var(--gh-uni-ring, transparent) inset'),
         rule('.gh-root[data-gh-opening="morph"] .gh-btn-cloud.gh-cloud-uni:not(.gh-focus)', 'box-shadow: 0 0 0 var(--gho-uni-ring, 2px) var(--gh-uni-ring, transparent) inset'),
@@ -340,7 +346,7 @@ export function homeCss(cardScale: number = CARD_SCALE_HANDHELD, options: { hide
         // Words and glyph on theme accent (or Steam blue)
         rule('.gh-btn-play', `width: ${HOME_PILL.width}px; flex: 0 0 ${HOME_PILL.width}px; height: ${ACTION_H}px; border-radius: var(--gh-r-pill); background: var(--ctp-accent-color, #1a9fff); border-color: var(--ctp-accent-color, #1a9fff); color: var(--ctp-crust, #fff)`),
         rule('.gh-btn-play', 'position: relative; overflow: hidden'),
-        rule('.gh-btn-play.gh-btn-dl', 'color: #fff'),
+        rule('.gh-btn-play.gh-btn-dl', 'color: var(--ctp-text, #fff)'),
         rule('.gh-btn-fill', `position: absolute; left: 0; top: 0; bottom: 0; background: ${DOWNLOAD_FILL_COLOR}; pointer-events: none; transition: width ${DOWNLOAD_FILL_MS}ms linear`),
         rule('.gh-btn-play > .gh-btn-icon, .gh-btn-play > .gh-btn-label', 'position: relative'),
         rule('.gh-btn-play', `justify-content: flex-start; padding: 0 ${HOME_PILL.padX}px; gap: ${HOME_PILL.gap}px; font-size: ${HOME_PILL.font}px`),
@@ -357,7 +363,7 @@ export function homeCss(cardScale: number = CARD_SCALE_HANDHELD, options: { hide
         rule('.gh-actions > .gh-btn-stream', `position: relative; z-index: 1; flex: 0 0 ${HOME_PILL.arrow}px; width: ${HOME_PILL.arrow}px; margin-left: -${HOME_PILL.arrow + 12}px; background: transparent;
             border: none; border-radius: 0px; backdrop-filter: none; box-shadow: none; transform: none`),
         rule(`${NOT_MOUSE} .gh-actions > .gh-btn-stream.gh-focus`, 'background: transparent; box-shadow: none; transform: none'),
-        rule(`${NOT_MOUSE} .gh-actions > .gh-btn-play:has(+ .gh-btn-stream.gh-focus)`, 'box-shadow: 0 0 0 2px #ffffff; transform: none'),
+        rule(`${NOT_MOUSE} .gh-actions > .gh-btn-play:has(+ .gh-btn-stream.gh-focus)`, 'box-shadow: 0 0 0 2px var(--ctp-text, #ffffff); transform: none'),
         rule(`${NOT_MOUSE} .gh-actions > .gh-btn-play:has(+ .gh-btn-stream.gh-focus) > .gh-play-arrow`, 'background: rgba(255,255,255,.28)'),
 
         // Recents row
@@ -404,8 +410,16 @@ export function homeCss(cardScale: number = CARD_SCALE_HANDHELD, options: { hide
         // until the fade ended (Michael on the Ally). The glass fades itself, and around it the largest parts that hold no
         // glass, each once; from transparent to its own opacity (what rests hidden stays hidden). Not in the open's copy.
         `@keyframes gh-return-in { from { opacity: 0; } }`,
+        `@keyframes gh-return-left { from { opacity: 0; translate: -36px 0; } to { opacity: 1; translate: 0 0; } }`,
+        `@keyframes gh-return-right { from { opacity: 0; translate: 36px 0; } to { opacity: 1; translate: 0 0; } }`,
+        `@keyframes gh-return-up { from { opacity: 0; translate: 0 28px; } to { opacity: 1; translate: 0 0; } }`,
+        `@keyframes gh-return-title { from { opacity: 0; translate: 0 14px; } to { opacity: 1; translate: 0 0; } }`,
         rule(`.gh-root.gh-back:not(.gh-bridge) .gh-safe :is(${HOME_GLASS.join(', ')}), .gh-root.gh-back:not(.gh-bridge) :is(.gh-safe, .gh-safe :has(${HOME_GLASS.join(', ')})) > :not(:has(${HOME_GLASS.join(', ')})):not(${HOME_GLASS.join(', ')})`,
             `animation: gh-return-in ${RETURN_TIMINGS.fade}ms ease backwards`),
+        soft('.gh-root.gh-back:not(.gh-bridge).nh-side-left .nh-min-list', 'animation: gh-return-left 240ms cubic-bezier(.22, 1, .36, 1) backwards'),
+        soft('.gh-root.gh-back:not(.gh-bridge).nh-side-right .nh-min-list', 'animation: gh-return-right 240ms cubic-bezier(.22, 1, .36, 1) backwards'),
+        soft('.gh-root.gh-back:not(.gh-bridge) .gh-recents', 'animation: gh-return-up 240ms cubic-bezier(.22, 1, .36, 1) backwards'),
+        soft('.gh-root.gh-back:not(.gh-bridge) .gh-title-block', 'animation: gh-return-title 220ms cubic-bezier(.22, 1, .36, 1) backwards'),
         rule('.gh-recents-snap .gh-cap', `transition: left ${SETTLE_WIDEN_MS}ms ${SLIDE_EASE}, width ${SETTLE_WIDEN_MS}ms ${SLIDE_EASE}, opacity ${CAP_STATE_MS}ms, filter ${CAP_STATE_MS}ms`),
         // "View more in your Library" card: a simple Steam Deck-like surface, without the old plugin grid icon.
         rule('.gh-cap-lib', `border-radius: 0; background: var(--ctp-surface0, rgba(60,56,54,.67)); box-shadow: none; --gh-edge: transparent`),
@@ -419,8 +433,8 @@ export function homeCss(cardScale: number = CARD_SCALE_HANDHELD, options: { hide
         rule('.gh-ghost', 'cursor: default; --gh-edge: rgba(255,255,255,.06); box-shadow: none; filter: grayscale(.6) brightness(.75)'),
         rule('.gh-ghost.gh-cap-off', 'filter: grayscale(1) brightness(.65)'),
         rule('.gh-ghost-badge', `position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: ${k(6)}px; background: rgba(5,7,10,.45)`),
-        rule('.gh-ghost-icon', `width: ${k(36)}px; height: ${k(36)}px; border-radius: 0px; display: flex; align-items: center; justify-content: center; font-size: ${k(20)}px; font-weight: 700; line-height: 1; background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.35); color: #fff`),
-        rule('.gh-ghost-label', `font-size: ${k(9.5)}px; font-weight: 800; letter-spacing: .18em; line-height: 1.2; text-align: center; color: #fff`),
+        rule('.gh-ghost-icon', `width: ${k(36)}px; height: ${k(36)}px; border-radius: 0px; display: flex; align-items: center; justify-content: center; font-size: ${k(20)}px; font-weight: 700; line-height: 1; background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.35); color: var(--ctp-text, #fff)`),
+        rule('.gh-ghost-label', `font-size: ${k(9.5)}px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; line-height: 1.2; text-align: center; color: var(--ctp-text, #fff)`),
         rule('.gh-btn-library', `width: 260px; flex: 0 0 260px; height: ${ACTION_H}px; background: var(--ctp-accent-color, #1a9fff); border-color: var(--ctp-accent-color, #1a9fff); color: var(--ctp-crust, #fff)`),
 
         // Minimalist vertical game title menu (borderless/outlineless)
@@ -443,7 +457,7 @@ export function homeCss(cardScale: number = CARD_SCALE_HANDHELD, options: { hide
         rule('.gh-page-up .gh-tabs', 'pointer-events: auto'),
         rule('.gh-tab', `position: relative; margin: 0; padding: 8px 2px 10px; font-size: 13px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase;
             line-height: 1.2; white-space: nowrap; color: rgba(255,255,255,.6); background: transparent; outline: none; cursor: pointer; transition: color 200ms`),
-        rule('.gh-tab.gh-tab-on', 'color: #fff'),
+        rule('.gh-tab.gh-tab-on', 'color: var(--ctp-text, #fff)'),
         rule(`${HOVER} .gh-tab:hover:not(.gh-tab-on)`, 'color: rgba(255,255,255,.85)'),
         rule('.gh-tab-line', `position: absolute; left: 0; right: 0; bottom: 0; height: 3px; border-radius: 0px; background: var(--glance-accent); opacity: 0; box-shadow: none;
             transition: opacity 250ms, box-shadow 250ms, background ${ACCENT_MS}ms`),
@@ -468,7 +482,7 @@ export function homeCss(cardScale: number = CARD_SCALE_HANDHELD, options: { hide
         rule('.gh-feed-track.gh-feed-drag', 'transition: none'),
         rule('.gh-feed-empty', 'position: absolute; left: 0; top: 0; height: 260px; display: flex; align-items: center; font-size: 16px; font-weight: 700; letter-spacing: .02em; color: rgba(255,255,255,.62)'),
         rule('.gh-card', `--gh-ring: rgba(255,255,255,.25);
-            position: absolute; top: 0; height: var(--gh-card-h, 260px); margin: 0; padding: 0; border-radius: var(--gh-r-card); overflow: hidden; color: #fff;
+            position: absolute; top: 0; height: var(--gh-card-h, 260px); margin: 0; padding: 0; border-radius: var(--gh-r-card); overflow: hidden; color: var(--ctp-text, #fff);
             background: rgba(12,16,22,.4); border: none; --gh-edge: rgba(255,255,255,.1); backdrop-filter: blur(16px); box-shadow: 0 6px 20px -10px rgba(0,0,0,.6);
             transform: none; outline: none; cursor: pointer; transition: box-shadow 300ms, transform 300ms, --gh-card-accent ${ACCENT_MS}ms ease`),
         // The edge over the art and shade, as on the recents capsules (no un-shaded bottom row).
@@ -549,7 +563,7 @@ export function homeCss(cardScale: number = CARD_SCALE_HANDHELD, options: { hide
  * in the row (the info button, which the page has not, fades), store pill, chip texts by position; the chips' glass
  * gives way to one panel per page card (.gh-open-shell, Michael's choice on the device).
  */
-export function openingRules(): string[] {
+export function openingRules(heroPos: string = heroPositionCss('center')): string[] {
     const T = OPEN_TIMINGS;
     const O = '.gh-root[data-gh-opening]';
     const M = '.gh-root[data-gh-opening="morph"]';
@@ -594,7 +608,7 @@ export function openingRules(): string[] {
         lateFade('gh-open-pill-out', 1, 0, T.extras, 'ease-in'),
         lateFade('gh-open-settle', 0, 1, T.settle, 'ease-in-out'),
         // Always there, hidden: the page's scrims over Home's, the opened game's hero (heroFade), the glass panels.
-        rule('.gh-hero-open', 'position: absolute; inset: 0; pointer-events: none; background-image: var(--gho-hero, none); background-size: cover; background-position: center 30%; background-repeat: no-repeat; opacity: 0'),
+        rule('.gh-hero-open', `position: absolute; inset: 0; pointer-events: none; background-image: var(--gho-hero, none); background-size: cover; background-position: ${heroPos}; background-repeat: no-repeat; opacity: 0`),
         // The glass: the page's cards and Clean panel, their tint, border and blur, so the page's arrive as they are (Michael,
         // on the Ally: moving blurred felt more seamless than a blur growing in after the hand-over). 16 canvas px is the page's
         // 16 d units. Its ring is Home's 1px, so it looks like the chips' all the way: Chromium snaps a border to whole device px

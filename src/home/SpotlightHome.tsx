@@ -101,7 +101,7 @@ function useBoxSize(ref: RefObject<HTMLDivElement | null>): Size | null {
 export function SpotlightHome() {
     const [recentIndex, setRecentIndex] = useState(0);
     const [restore] = useState(takeRestore);
-    const { gameLogo, showNewLabel, showLastPlayedLabel, homeRowStyle, homeLayout, minimalSide, minimalShowDetails, showPlaytime, showHltb, hideStatusBarBackground } = useSettings();
+    const { gameLogo, showNewLabel, showLastPlayedLabel, homeRowStyle, homeLayout, minimalSide, minimalShowDetails, showPlaytime, showHltb, hideStatusBarBackground, heroPosition } = useSettings();
     const showHeroPanel = homeLayout !== 'minimal' || minimalShowDetails;
     const [resolved, setResolved] = useState(restore === null);
     const [restoring, setRestoring] = useState(restore !== null);
@@ -388,7 +388,7 @@ export function SpotlightHome() {
     const legend = legendReserve(useLegendHeight(rootRef, size), canvas.scale);
     const geometry = useMemo(() => recentsGeometry(scale), [scale]);
     const rowViewport = canvas.logicalWidth - 2 * rowInset(side, tv);
-    const css = useMemo(() => homeCss(scale, { hideStatusBarBackground }), [scale, hideStatusBarBackground]);
+    const css = useMemo(() => homeCss(scale, { hideStatusBarBackground, heroPosition }), [scale, hideStatusBarBackground, heroPosition]);
     const game = data.focused;
     const homeEyebrow = data.focusedIsNew
         ? eyebrowText(showNewLabel ? data.lastPlayedLabel : null, false, showNewLabel, data.rowCollection !== null)

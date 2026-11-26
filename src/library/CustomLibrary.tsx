@@ -1,15 +1,17 @@
-import { Focusable } from '@decky/ui';
+import { Focusable, Navigation } from '@decky/ui';
 import type { GamepadEvent } from '@decky/ui';
 import { CSSProperties, memo, MouseEvent, RefObject, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { FaFilter, FaSortAmountDown } from 'react-icons/fa';
 import { LOG_PREFIX } from '../constants';
+import { markOpen } from '../data/openIntent';
 import { useSettings } from '../data/settings';
 import { openGameActions } from '../home/ActionRow';
 import { HeroBackground } from '../home/HeroBackground';
 import { browserStores, capsuleUrls } from '../home/artwork';
-import { focusElementSettled, openPage } from '../home/homeNav';
+import { focusElementSettled } from '../home/homeNav';
 import { sideInset } from '../home/insets';
 import { findLegendHeight, legendReserve } from '../home/legend';
+import { RETURN_TIMINGS } from '../home/motion';
 import { installMouseMode } from '../home/mouseMode';
 import { homeMode } from '../home/mode';
 import { gameStepSound, playNavSound } from '../home/navSound';
@@ -22,6 +24,7 @@ import { isRussianSystem, tr } from '../i18n/steamText';
 import { formatHours, minutesToHours, steamLanguageToLocale } from '../logic/format';
 import { getSteamLanguage, peekSteamLanguage } from '../data/steam';
 import { isTvScreen } from '../styles/screenScale';
+import { steamEnterOffCss } from '../styles/theme';
 import { libraryCss } from './libraryCss';
 import {
     filterAndSortLibraryGames,
@@ -33,7 +36,7 @@ import {
     nextLibrarySort,
     readLibrarySnapshot,
 } from './libraryData';
-import { noteLibraryMemory, readLibraryMemory } from './libraryMemory';
+import { markLibraryLeaving, noteLibraryMemory, readLibraryMemory, takeLibraryReturn } from './libraryMemory';
 import { libraryButtonAction, visibleRowRange } from './libraryNav';
 
 interface Size {
@@ -102,8 +105,25 @@ function useViewportHeight(ref: RefObject<HTMLDivElement | null>, dep: unknown):
             if (h > 0) setHeight((old) => (old === h ? old : h));
         };
         measure();
+        const view = el.ownerDocument?.defaultView;
+        const RO = view?.ResizeObserver ?? (typeof ResizeObserver !== 'undefined' ? ResizeObserver : undefined);
+        let observer: ResizeObserver | null = null;
+        if (RO) {
+            observer = new RO(measure);
+            observer.observe(el);
+        } else {
+            view?.addEventListener('resize', measure);
+        }
         const t = setTimeout(measure, 80);
-        return () => clearTimeout(t);
+        return () => {
+            clearTimeout(t);
+            try {
+                if (observer) observer.disconnect();
+                else view?.removeEventListener('resize', measure);
+            } catch {
+                // ignore
+            }
+        };
     }, [ref, dep]);
     return height;
 }
@@ -141,7 +161,7 @@ const LibraryCoverCard = memo(function LibraryCoverCard({
 
 export function CustomLibrary() {
     const currentSettings = useSettings();
-    const { minimalSide, hideStatusBarBackground, libraryGridColumns, libraryGridSize } = currentSettings;
+    const { minimalSide, hideStatusBarBackground, libraryGridColumns, libraryGridSize, heroPosition } = currentSettings;
     const knownLang = peekSteamLanguage();
     const loadedLang = useAsync(knownLang ? null : 'lang', getSteamLanguage);
     const systemLang = knownLang ?? loadedLang ?? 'english';
@@ -182,6 +202,13 @@ export function CustomLibrary() {
 
     const rootRef = useRef<HTMLDivElement>(null);
     const listRef = useRef<HTMLDivElement | null>(null);
+    const tabsRef = useRef<HTMLDivElement | null>(null);
+    useEffect(() => {
+        const active = tabsRef.current?.querySelector('.nh-lib-tab-on, .nh-lib-min-tab-on');
+        if (active instanceof HTMLElement) {
+            active.scrollIntoView({ inline: 'nearest', block: 'nearest' });
+        }
+    }, [activeTab?.id, minimal]);
     const size = useBoxSize(rootRef);
     const canvas = homeCanvas(size?.width ?? 0, size?.height ?? 0);
     const logicalHeight = size ? size.height / canvas.scale : canvas.logicalHeight;
@@ -256,14 +283,46 @@ export function CustomLibrary() {
     const nowSec = Math.floor(Date.now() / 1000);
     const bottomReserve = legendReserve(legendH, canvas.scale);
     const css = useMemo(
-        () => libraryCss({ hideStatusBarBackground, cols, cardW, cardH, gap }),
-        [hideStatusBarBackground, cols, cardW, cardH, gap],
+        () => libraryCss({ hideStatusBarBackground, cols, cardW, cardH, gap, heroPosition }),
+        [hideStatusBarBackground, cols, cardW, cardH, gap, heroPosition],
     );
+
+    const [back, setBack] = useState(takeLibraryReturn);
+    const [opening, setOpening] = useState(false);
+    const openTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    useEffect(() => {
+        if (!back) return undefined;
+        const timer = setTimeout(() => setBack(false), RETURN_TIMINGS.hold);
+        return () => clearTimeout(timer);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+    useEffect(() => () => {
+        if (openTimerRef.current !== null) clearTimeout(openTimerRef.current);
+    }, []);
+    const enterOff = useMemo(() => (back ? steamEnterOffCss() : ''), [back]);
+
+    const openGameFromLibrary = (appId: number) => {
+        if (opening) return;
+        playNavSound('IntoGameDetail');
+        setOpening(true);
+        markLibraryLeaving();
+        const mode = homeMode(currentSettings);
+        const look = mode.gamePage && mode.restyleDetails ? (mode.cleanDetails ? 'clean' : 'spotlight') : 'steam';
+        markOpen(appId, { look, mode: 'all' });
+        openTimerRef.current = setTimeout(() => {
+            openTimerRef.current = null;
+            try {
+                Navigation.Navigate(`/library/app/${appId}`);
+            } catch (error) {
+                setOpening(false);
+                console.warn(`${LOG_PREFIX} Library: could not open game page`, error);
+            }
+        }, 160);
+    };
 
     const openSelected = () => {
         if (!selectedGame) return;
-        playNavSound('IntoGameDetail');
-        openPage(selectedGame.appId);
+        openGameFromLibrary(selectedGame.appId);
     };
 
     const stepTab = (delta: -1 | 1) => {
@@ -278,6 +337,7 @@ export function CustomLibrary() {
         listRef.current?.querySelector<HTMLElement>(minimal ? '.nh-lib-min-item-sel' : '.nh-lib-card-sel') ?? listRef.current;
 
     const onButtonDown = (evt: GamepadEvent) => {
+        if (opening) return;
         try {
             const button = Number(evt?.detail?.button);
             const isRepeat = Boolean(evt?.detail?.is_repeat);
@@ -304,7 +364,7 @@ export function CustomLibrary() {
     };
 
     const onWheel = useWheelStep((steps) => {
-        if (games.length === 0) return;
+        if (opening || games.length === 0) return;
         const step = minimal ? steps : steps * cols;
         const next = Math.min(games.length - 1, Math.max(0, selectedIndex + step));
         if (next !== selectedIndex) setSelectedAppId(games[next].appId);
@@ -312,8 +372,7 @@ export function CustomLibrary() {
 
     const onCardOrItemSelect = (game: LibraryGame, alreadySelected: boolean) => {
         if (alreadySelected) {
-            playNavSound('IntoGameDetail');
-            openPage(game.appId);
+            openGameFromLibrary(game.appId);
             return;
         }
         setSelectedAppId(game.appId);
@@ -335,11 +394,12 @@ export function CustomLibrary() {
         if (selectedGame.lastPlayed > 0) metaParts.push(formatLastPlayed(selectedGame.lastPlayed, nowSec, locale));
         metaParts.push(selectedGame.installed ? tr('installedStatus') : tr('notInstalled'));
     }
+    const stageKey = `${activeTab?.id ?? 'all'}:${installedOnly ? 1 : 0}:${sort}`;
 
     return (
         <div
             ref={rootRef}
-            className={`nh-lib-root nh-lib-mode-${minimal ? 'minimal' : 'grid'} nh-side-${minimalSide}`}
+            className={`nh-lib-root nh-lib-mode-${minimal ? 'minimal' : 'grid'} nh-side-${minimalSide}${back ? ' nh-lib-back' : ''}${opening ? ' nh-lib-opening' : ''}`}
             onWheel={onWheel}
             style={{
                 '--nh-side': `${side}px`,
@@ -347,6 +407,7 @@ export function CustomLibrary() {
             } as CSSProperties}
         >
             <style>{css}</style>
+            {enterOff && <style>{enterOff}</style>}
             <HeroBackground appId={settledHeroId || null} detailsVersion={0} neighbours={[]} />
             <div className="nh-lib-scrim" />
             <div className="nh-lib-canvas" style={canvasStyle(canvas, logicalHeight, Boolean(size))}>
@@ -354,7 +415,7 @@ export function CustomLibrary() {
                     {minimal ? (
                         <>
                             <div className="nh-lib-min-col">
-                                <div className="nh-lib-min-tabs">
+                                <div ref={tabsRef} className="nh-lib-min-tabs">
                                     {snapshot.tabs.map((tab) => (
                                         <div
                                             key={tab.id}
@@ -395,23 +456,25 @@ export function CustomLibrary() {
                                     {games.length === 0 ? (
                                         <div className="nh-lib-empty">{emptyLabel}</div>
                                     ) : (
-                                        <div className="nh-lib-track" style={{ transform: `translateY(${-scrollRowTop}px)` }}>
-                                            {Array.from({ length: Math.max(0, endRow - startRow) }, (_, k) => {
-                                                const idx = startRow + k;
-                                                const game = games[idx];
-                                                if (!game) return null;
-                                                const sel = idx === selectedIndex;
-                                                return (
-                                                    <div
-                                                        key={game.appId}
-                                                        className={`nh-lib-min-item${sel ? ' nh-lib-min-item-sel' : ''}${!game.installed && !game.shortcut ? ' nh-lib-min-item-off' : ''}`}
-                                                        style={{ top: `${idx * MIN_PITCH}px` }}
-                                                        onClick={() => onCardOrItemSelect(game, sel)}
-                                                    >
-                                                        <span className="nh-lib-min-item-name">{game.name}</span>
-                                                    </div>
-                                                );
-                                            })}
+                                        <div key={stageKey} className="nh-lib-tab-stage">
+                                            <div className="nh-lib-track" style={{ transform: `translateY(${-scrollRowTop}px)` }}>
+                                                {Array.from({ length: Math.max(0, endRow - startRow) }, (_, k) => {
+                                                    const idx = startRow + k;
+                                                    const game = games[idx];
+                                                    if (!game) return null;
+                                                    const sel = idx === selectedIndex;
+                                                    return (
+                                                        <div
+                                                            key={game.appId}
+                                                            className={`nh-lib-min-item${sel ? ' nh-lib-min-item-sel' : ''}${!game.installed && !game.shortcut ? ' nh-lib-min-item-off' : ''}`}
+                                                            style={{ top: `${idx * MIN_PITCH}px` }}
+                                                            onClick={() => onCardOrItemSelect(game, sel)}
+                                                        >
+                                                            <span className="nh-lib-min-item-name">{game.name}</span>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
                                         </div>
                                     )}
                                 </Focusable>
@@ -426,7 +489,7 @@ export function CustomLibrary() {
                     ) : (
                         <div className="nh-lib-grid-shell">
                             <div className="nh-lib-header">
-                                <div className="nh-lib-tabs">
+                                <div ref={tabsRef} className="nh-lib-tabs">
                                     {snapshot.tabs.map((tab) => (
                                         <div
                                             key={tab.id}
@@ -468,30 +531,32 @@ export function CustomLibrary() {
                                 {games.length === 0 ? (
                                     <div className="nh-lib-empty">{emptyLabel}</div>
                                 ) : (
-                                    <div className="nh-lib-track" style={{ transform: `translateY(${-scrollRowTop}px)` }}>
-                                        {Array.from({ length: Math.max(0, endRow - startRow) }, (_, k) => {
-                                            const rowIdx = startRow + k;
-                                            const rowGames = games.slice(rowIdx * cols, (rowIdx + 1) * cols);
-                                            return (
-                                                <div
-                                                    key={rowIdx}
-                                                    className="nh-lib-row"
-                                                    style={{ top: `${rowIdx * gridPitch}px` }}
-                                                >
-                                                    {rowGames.map((game, colIdx) => {
-                                                        const globalIdx = rowIdx * cols + colIdx;
-                                                        return (
-                                                            <LibraryCoverCard
-                                                                key={game.appId}
-                                                                game={game}
-                                                                selected={globalIdx === selectedIndex}
-                                                                onSelect={(g, sel) => onCardOrItemSelect(g, sel)}
-                                                            />
-                                                        );
-                                                    })}
-                                                </div>
-                                            );
-                                        })}
+                                    <div key={stageKey} className="nh-lib-tab-stage">
+                                        <div className="nh-lib-track" style={{ transform: `translateY(${-scrollRowTop}px)` }}>
+                                            {Array.from({ length: Math.max(0, endRow - startRow) }, (_, k) => {
+                                                const rowIdx = startRow + k;
+                                                const rowGames = games.slice(rowIdx * cols, (rowIdx + 1) * cols);
+                                                return (
+                                                    <div
+                                                        key={rowIdx}
+                                                        className="nh-lib-row"
+                                                        style={{ top: `${rowIdx * gridPitch}px` }}
+                                                    >
+                                                        {rowGames.map((game, colIdx) => {
+                                                            const globalIdx = rowIdx * cols + colIdx;
+                                                            return (
+                                                                <LibraryCoverCard
+                                                                    key={game.appId}
+                                                                    game={game}
+                                                                    selected={globalIdx === selectedIndex}
+                                                                    onSelect={(g, sel) => onCardOrItemSelect(g, sel)}
+                                                                />
+                                                            );
+                                                        })}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
                                     </div>
                                 )}
                             </Focusable>

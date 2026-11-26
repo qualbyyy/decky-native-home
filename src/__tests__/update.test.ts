@@ -6,6 +6,7 @@ vi.mock('@decky/api', () => ({ callable: () => async () => null }));
 import type { KvBackend } from '../data/kv';
 import { memoryKv as createMemoryKv } from '../data/kv';
 import { createSettingsStore, CURRENT_SETTINGS_VERSION } from '../data/settings';
+import { homeCss } from '../home/homeCss';
 import { homeMode } from '../home/mode';
 import { openVariant } from '../home/openHome';
 import { findTopBar } from '../home/topBar';
@@ -18,7 +19,7 @@ import {
 import { libraryButtonAction, visibleRowRange } from '../library/libraryNav';
 import { insertHero } from '../patches/insertHero';
 import { createAfterPatchGuard } from '../patches/patchOnce';
-import { buildArrivingCss, buildThemeCss, buildUnifideckCss, ThemeClasses } from '../styles/themeCss';
+import { buildArrivingCss, buildLaunchCss, buildThemeCss, buildUnifideckCss, SETTLE, ThemeClasses, twinTargets } from '../styles/themeCss';
 import { buildContextMenuCss, buildFooterCss, buildMainMenuCss, buildMenuChromeCss, buildQuickAccessCss } from '../styles/menuCss';
 import { createMenuChromeSync, MENU_CHROME_STYLE_ID, MENU_CHROME_WINDOW_ATTR } from '../styles/menuChromeSync';
 
@@ -541,5 +542,106 @@ describe('CustomLibrary data, navigation, and virtualization', () => {
     it('computes bounded visible row ranges for virtualization', () => {
         expect(visibleRowRange(400, 600, 200, 50, 1)).toEqual({ startRow: 1, endRow: 6 });
         expect(visibleRowRange(0, 600, 200, 2, 2)).toEqual({ startRow: 0, endRow: 2 });
+    });
+});
+
+describe('audit regression checks', () => {
+    const classes: ThemeClasses = {
+        header: { TopCapsule: 'TopCapsule', BoxSizer: 'BoxSizer', TitleImageContainer: 'TitleImg', SVGTitle: 'SvgTitle' },
+        details: { InnerContainer: 'Inner', AppDetailsOverviewPanel: 'Overview' },
+        overview: {},
+        root: { AppDetailsContainer: 'AppDetails', PlaySection: 'PlaySection', ActionButtonAndStatusPanel: 'PlayBtn', AppButtons: 'AppButtons' },
+        play: { MenuButton: 'MenuBtn', CloudStatusRow: 'CloudRow', CloudStatusIcon: 'CloudIcon' },
+        launch: { Container: 'LaunchOverlay' },
+    };
+
+    it('avoids !important on animated transform/opacity and targets .nh-gv-desc', () => {
+        const launch = buildLaunchCss(classes);
+        expect(launch).not.toMatch(/opacity\s*:[^;]*!important/);
+
+        const arrivingHidden = buildArrivingCss(classes, 'spotlight', 'all', false);
+        const arrivingShown = buildArrivingCss(classes, 'spotlight', 'all', true);
+        expect(arrivingHidden).not.toMatch(/opacity\s*:[^;]*!important/);
+        expect(arrivingShown).not.toMatch(/opacity\s*:[^;]*!important/);
+
+        const uni = buildUnifideckCss(classes, { restyle: true, minimal: false });
+        expect(uni).not.toMatch(/(?:^|[\s;{])transform\s*:[^;]*!important/);
+
+        const theme = buildThemeCss(classes, { restyle: true, minimal: false });
+        expect(theme).not.toMatch(/transform\s*:\s*scale\([^;]*!important/);
+
+        expect(twinTargets(classes, 'spotlight')[SETTLE.desc]).toContain('.nh-gv-desc');
+    });
+
+    it('wraps minimal home action bar and scrolls overflowing library tabs', () => {
+        const home = homeCss();
+        expect(home).toContain('.gh-root.nh-layout-minimal .gh-action-bar { flex-wrap: wrap !important; }');
+
+        const lib = libraryCss({ cols: 5, cardW: 160, cardH: 240, gap: 14, hideStatusBarBackground: true });
+        expect(lib).toContain('.nh-lib-tabs { display: flex !important; align-items: center !important; gap: 8px !important; overflow-x: auto !important;');
+        expect(lib).toContain('.nh-lib-min-tabs { display: flex !important; align-items: center !important; gap: 12px !important; overflow-x: auto !important;');
+    });
+
+    it('serializes rapid settings writes and syncs setCleanPage with gamePageLayout', async () => {
+        const writes: Array<Record<string, unknown>> = [];
+        let releaseFirst: (() => void) | null = null;
+        let call = 0;
+        const slowKv: KvBackend = {
+            ...createMemoryKv(),
+            async set(_key, value) {
+                call += 1;
+                if (call === 1) {
+                    await new Promise<void>((resolve) => { releaseFirst = resolve; });
+                }
+                writes.push({ ...(value as Record<string, unknown>) });
+            },
+        };
+        const store = createSettingsStore(slowKv);
+        const p1 = store.setHomeLayout('carousel');
+        const p2 = store.setCleanPage(true);
+        expect(store.get().gamePageLayout).toBe('minimal');
+        releaseFirst!();
+        await Promise.all([p1, p2]);
+        expect(writes).toHaveLength(2);
+        expect(writes[0].homeLayout).toBe('carousel');
+        expect(writes[0].cleanPage).toBe(false);
+        expect(writes[1].homeLayout).toBe('carousel');
+        expect(writes[1].cleanPage).toBe(true);
+        expect(writes[1].gamePageLayout).toBe('minimal');
+    });
+
+    it('keeps hero cover scale locked on Game Page and applies heroPosition across Home, Library, and Game Page', () => {
+        const home = homeCss(undefined, { heroPosition: 'right' });
+        expect(home).toContain('.gh-hero-full { position: absolute !important; inset: 0 !important; background-size: cover !important; background-position: 100% 30% !important;');
+        expect(home).toContain('.gh-hero-open { position: absolute !important; inset: 0 !important; pointer-events: none !important; background-image: var(--gho-hero, none) !important; background-size: cover !important; background-position: 100% 30% !important;');
+
+        const lib = libraryCss({ cols: 5, cardW: 160, cardH: 240, gap: 14, hideStatusBarBackground: true, heroPosition: 'right' });
+        expect(lib).toContain('.nh-lib-root .gh-hero-full { position: absolute !important; inset: 0 !important; background-size: cover !important; background-position: 100% 30% !important;');
+
+        const page = buildThemeCss(
+            {
+                ...classes,
+                header: { ...classes.header, Background: 'HdrBg', HeaderBackgroundImage: 'HdrBgImg', ImgSrc: 'HdrImg' },
+            },
+            { restyle: true, minimal: false, heroPosition: 'right' },
+        );
+        expect(page).toContain('object-fit: cover !important;');
+        expect(page).toContain('object-position: 100% 30% !important;');
+        expect(page).toContain('transform: none !important;');
+        expect(page).toContain('.TopCapsule img:not(.TitleImg img)');
+        expect(page).toContain('.TopCapsule { height: 100vh !important; min-height: 0 !important; }');
+    });
+
+    it('includes compositor-safe return animations on Home and open/return/tab animations in Library', () => {
+        const home = homeCss();
+        expect(home).toContain('@keyframes gh-return-left');
+        expect(home).toContain('@keyframes gh-return-up');
+        expect(home).toContain('.gh-root.gh-back:not(.gh-bridge) .gh-recents');
+
+        const lib = libraryCss({ cols: 5, cardW: 160, cardH: 240, gap: 14, hideStatusBarBackground: true });
+        expect(lib).toContain('.nh-lib-root.nh-lib-back .nh-lib-grid-shell');
+        expect(lib).toContain('.nh-lib-root.nh-lib-opening .nh-lib-grid-shell');
+        expect(lib).toContain('.nh-lib-root .nh-lib-tab-stage');
+        expect(lib).not.toMatch(/(?:^|[\s;{])(transform|opacity)\s*:[^;]*!important/);
     });
 });

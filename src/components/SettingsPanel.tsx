@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { PLUGIN_NAME } from '../constants';
 import { cache } from '../data/cache';
 import { checkRepositoryUpdate, RepositoryUpdateState } from '../data/repositoryUpdate';
-import { GamePageLayout, HomeLayout, LibraryGridSize, LibraryLayout, MinimalSide, settings, useSettings } from '../data/settings';
+import { GamePageLayout, HeroPosition, HomeLayout, LibraryGridSize, LibraryLayout, MinimalSide, settings, useSettings } from '../data/settings';
 import { getSteamLanguage, peekSteamLanguage } from '../data/steam';
 import { RECENT_ROW, ROW_SORTS, RowSort, rowSortLabel, sortByLabel, steamHomeCollections } from '../home/collections';
 import { RowStyle } from '../home/recentsLayout';
@@ -43,6 +43,12 @@ const LABELS = {
         fullView: 'Full',
         minimalView: 'Minimalist',
         hideCover: 'Hide cover on game page',
+        heroPosition: 'Cover alignment',
+        posCenter: 'Center',
+        posLeft: 'Left',
+        posRight: 'Right',
+        posTop: 'Top',
+        posBottom: 'Bottom',
         elements: 'Elements',
         gameLogos: 'Game logos',
         newLabel: 'Show “New” marker',
@@ -92,6 +98,12 @@ const LABELS = {
         fullView: 'Полный',
         minimalView: 'Минималистичный',
         hideCover: 'Скрывать обложку на странице игры',
+        heroPosition: 'Центрирование обложки',
+        posCenter: 'По центру',
+        posLeft: 'Слева',
+        posRight: 'Справа',
+        posTop: 'Сверху',
+        posBottom: 'Снизу',
         elements: 'Элементы',
         gameLogos: 'Логотипы игр',
         newLabel: 'Показывать метку «Новое»',
@@ -136,12 +148,15 @@ export function SettingsPanel() {
         hideStatusBarBackground,
         customMenus,
         hideGameCover,
+        heroPosition,
         autoPreload,
     } = useSettings();
     const knownLang = peekSteamLanguage();
     const loadedLang = useAsync(knownLang ? null : 'lang', getSteamLanguage);
-    const t = LABELS[knownLang ?? loadedLang ? (isRussianSystem() ? 'ru' : 'en') : (isRussianSystem() ? 'ru' : 'en')];
+    const t = LABELS[(knownLang ?? loadedLang ?? '').toLowerCase().startsWith('ru') || isRussianSystem() ? 'ru' : 'en'];
     const qamMarkerRef = useRef<HTMLSpanElement | null>(null);
+    const mountedRef = useRef(true);
+    useEffect(() => () => { mountedRef.current = false; }, []);
     useEffect(() => {
         if (customMenus && qamMarkerRef.current?.ownerDocument) {
             registerMenuChromeDocument(qamMarkerRef.current.ownerDocument, 'quickaccess');
@@ -150,8 +165,10 @@ export function SettingsPanel() {
     const [updateState, setUpdateState] = useState<RepositoryUpdateState | { status: 'idle' | 'checking'; current: string | null }>({ status: 'idle', current: null });
     const collections = useMemo(steamHomeCollections, []);
     const checkUpdates = async () => {
+        if (updateState.status === 'checking') return;
         setUpdateState({ status: 'checking', current: updateState.current });
         const next = await checkRepositoryUpdate();
+        if (!mountedRef.current) return;
         setUpdateState(next);
         const body = next.status === 'upToDate'
             ? t.upToDate(next.latest)
@@ -342,6 +359,21 @@ export function SettingsPanel() {
 
             <PanelSection title={t.elements}>
                 <PanelSectionRow>
+                    <DropdownItem
+                        label={t.heroPosition}
+                        menuLabel={t.heroPosition}
+                        rgOptions={[
+                            { data: 'center', label: t.posCenter },
+                            { data: 'left', label: t.posLeft },
+                            { data: 'right', label: t.posRight },
+                            { data: 'top', label: t.posTop },
+                            { data: 'bottom', label: t.posBottom },
+                        ]}
+                        selectedOption={heroPosition}
+                        onChange={(option) => settings.setHeroPosition(option.data as HeroPosition)}
+                    />
+                </PanelSectionRow>
+                <PanelSectionRow>
                     <ToggleField
                         label={t.gameLogos}
                         checked={gameLogo}
@@ -415,7 +447,7 @@ export function SettingsPanel() {
 
             <PanelSection title={t.updates}>
                 <PanelSectionRow>
-                    <ButtonItem layout="below" onClick={checkUpdates}>
+                    <ButtonItem layout="below" disabled={updateState.status === 'checking'} onClick={checkUpdates}>
                         {updateState.status === 'checking' ? t.checkingUpdates : t.checkUpdates}
                     </ButtonItem>
                 </PanelSectionRow>

@@ -73,21 +73,27 @@ def key_for_appid(registry: dict, appid: int) -> dict | None:
 
 
 class RegistryCache:
-    """Reloads the registry only when the file's modification time changes."""
+    """Reloads the registry only when the file's mtime or size changes."""
 
     def __init__(self, path: str) -> None:
         self._path = path
-        self._mtime: float | None = None
+        self._sig: tuple[int, int] | None = None
         self._data: dict = {}
 
     def get(self) -> dict:
         try:
-            mtime = os.stat(self._path).st_mtime
+            st = os.stat(self._path)
+            sig = (st.st_mtime_ns, st.st_size)
         except OSError:
-            self._mtime = None
+            self._sig = None
             self._data = {}
             return self._data
-        if mtime != self._mtime:
-            self._data = load_registry(self._path)
-            self._mtime = mtime
+        if sig != self._sig:
+            try:
+                with open(self._path, encoding="utf-8") as f:
+                    data = json.load(f)
+            except (OSError, ValueError):
+                return self._data
+            self._data = data if isinstance(data, dict) else {}
+            self._sig = sig
         return self._data

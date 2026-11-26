@@ -98,7 +98,7 @@ function Hero({ overview, details, restyle, minimal }: Props & { restyle: boolea
     }, [game.appId, looked]);
     const [openedFrom] = useState(() => openPending(game.appId));
 
-    const { homeStatusBar: statusBar, gameLogo, showNewLabel, showLastPlayedLabel, hideGameCover, hideStatusBarBackground } = useSettings();
+    const { homeStatusBar: statusBar, gameLogo, showNewLabel, showLastPlayedLabel, hideGameCover, hideStatusBarBackground, heroPosition } = useSettings();
     const accent = useGameAccent(game.appId, restyle);
     const { download } = useDownload(restyle && game.appId !== 0 ? game.appId : null);
     const uniInstalled = useUnifideckInstalled(game.appId, restyle && game.isShortcut);
@@ -166,7 +166,7 @@ function Hero({ overview, details, restyle, minimal }: Props & { restyle: boolea
                 </div>
             )}
             <div className={`gg-hero nh-gv-hero${minimal ? ' nh-gv-min' : ' nh-gv-full'}`} ref={heroRef}>
-                <style>{themeCss({ restyle, minimal, hideCover: hideGameCover, hideStatusBarBackground })}</style>
+                <style>{themeCss({ restyle, minimal, hideCover: hideGameCover, hideStatusBarBackground, heroPosition })}</style>
                 <style>{unifideckCss({ restyle, minimal })}</style>
                 {ringStyle && <style>{ringStyle}</style>}
                 {launching && <style>{launchCss()}</style>}

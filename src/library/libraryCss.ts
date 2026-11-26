@@ -1,3 +1,4 @@
+import { heroPositionCss, type HeroPosition } from '../data/settings';
 import { SIDE_INSET } from '../home/insets';
 import { HERO_FADE_MS } from '../home/motion';
 
@@ -18,10 +19,12 @@ export interface LibraryCssOptions {
     cardW: number;
     cardH: number;
     gap: number;
+    heroPosition?: HeroPosition;
 }
 
 export function libraryCss(options: LibraryCssOptions): string {
-    const { hideStatusBarBackground, cols, cardW, cardH, gap } = options;
+    const { hideStatusBarBackground, cols, cardW, cardH, gap, heroPosition } = options;
+    const heroPos = heroPositionCss(heroPosition ?? 'center');
     return [
         `@keyframes nh-lib-fade { from { opacity: 0; } to { opacity: 1; } }`,
         rule('.nh-lib-root', `--nh-side: ${SIDE_INSET.handheld}px; --nh-top: 52px; --nh-bottom: 46px;
@@ -34,9 +37,9 @@ export function libraryCss(options: LibraryCssOptions): string {
         rule('.nh-lib-root .gh-hero-layer', `position: absolute; inset: 0; will-change: opacity; animation: nh-lib-fade ${HERO_FADE_MS}ms ease both`),
         rule('.nh-lib-root .gh-hero-layer.gh-hero-settled', 'animation: none; opacity: 1'),
         rule('.nh-lib-root .gh-hero-none', 'background: var(--ctp-base, #0e141b)'),
-        rule('.nh-lib-root .gh-hero-full', 'position: absolute; inset: 0; background-size: cover; background-position: center 30%; background-repeat: no-repeat'),
+        rule('.nh-lib-root .gh-hero-full', `position: absolute; inset: 0; background-size: cover; background-position: ${heroPos}; background-repeat: no-repeat`),
         rule('.nh-lib-root .gh-hero-blur', 'position: absolute; inset: -60px; background-size: cover; background-position: center; filter: blur(42px) saturate(1.2) brightness(.75)'),
-        rule('.nh-lib-root .gh-hero-sharp', `position: absolute; right: 0; top: 0; height: 100%; width: 62%; background-size: cover; background-position: center 30%; background-repeat: no-repeat; opacity: .88;
+        rule('.nh-lib-root .gh-hero-sharp', `position: absolute; right: 0; top: 0; height: 100%; width: 62%; background-size: cover; background-position: ${heroPos}; background-repeat: no-repeat; opacity: .88;
             -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 45%); mask-image: linear-gradient(90deg, transparent 0%, #000 45%)`),
 
         // Scrims per Library mode
@@ -61,8 +64,9 @@ export function libraryCss(options: LibraryCssOptions): string {
         // ---------------- GRID MODE ----------------
         rule('.nh-lib-grid-shell', `position: absolute; inset: 0; display: flex; flex-direction: column; padding: 8px var(--nh-side) 10px; gap: 12px`),
         rule('.nh-lib-header', 'display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 40px; flex: 0 0 auto'),
-        rule('.nh-lib-tabs', 'display: flex; align-items: center; gap: 8px; overflow: hidden; flex: 1 1 auto; min-width: 0'),
-        rule('.nh-lib-tab', `display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 0px;
+        rule('.nh-lib-tabs', 'display: flex; align-items: center; gap: 8px; overflow-x: auto; scrollbar-width: none; flex: 1 1 auto; min-width: 0'),
+        rule('.nh-lib-tabs::-webkit-scrollbar', 'display: none'),
+        rule('.nh-lib-tab', `display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 0px; flex: 0 0 auto;
             font-size: 13px; font-weight: 600; white-space: nowrap; color: var(--ctp-subtext0, #8b929a); background: transparent;
             border: 2px solid transparent; outline: none; cursor: pointer; transition: color 140ms, background 140ms, border-color 140ms`),
         rule('.nh-lib-tab-on', `color: var(--ctp-crust, #0b0f14); background: var(--ctp-accent-color, #1a9fff); border-color: var(--ctp-accent-color, #1a9fff); font-weight: 700`),
@@ -103,9 +107,10 @@ export function libraryCss(options: LibraryCssOptions): string {
         rule('.nh-lib-min-col', `position: absolute; top: 18px; bottom: 18px; width: 390px; display: flex; flex-direction: column; gap: 10px`),
         rule('.nh-side-left .nh-lib-min-col', 'left: var(--nh-side)'),
         rule('.nh-side-right .nh-lib-min-col', 'right: var(--nh-side)'),
-        rule('.nh-lib-min-tabs', 'display: flex; align-items: center; gap: 12px; overflow: hidden; flex: 0 0 auto; padding: 0 6px'),
+        rule('.nh-lib-min-tabs', 'display: flex; align-items: center; gap: 12px; overflow-x: auto; scrollbar-width: none; flex: 0 0 auto; padding: 0 6px'),
+        rule('.nh-lib-min-tabs::-webkit-scrollbar', 'display: none'),
         rule('.nh-side-right .nh-lib-min-tabs', 'justify-content: flex-end'),
-        rule('.nh-lib-min-tab', `font-size: 13px; font-weight: 600; color: var(--ctp-subtext0, rgba(255, 255, 255, 0.55));
+        rule('.nh-lib-min-tab', `flex: 0 0 auto; font-size: 13px; font-weight: 600; color: var(--ctp-subtext0, rgba(255, 255, 255, 0.55));
             white-space: nowrap; cursor: pointer; padding: 4px 0; border-bottom: 3px solid transparent; transition: color 140ms, border-color 140ms`),
         rule('.nh-lib-min-tab-on', `color: var(--ctp-text, #ffffff); border-bottom-color: var(--ctp-accent-color, #1a9fff); font-weight: 700`),
         rule('.nh-lib-min-sub', `display: flex; align-items: center; gap: 10px; padding: 0 6px; font-size: 11px; font-weight: 600;
@@ -135,6 +140,22 @@ export function libraryCss(options: LibraryCssOptions): string {
 
         // Empty state
         rule('.nh-lib-empty', `position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 600; color: var(--ctp-subtext0, #8b929a)`),
+
+        // Library open / return / tab-switch motion (compositor-only opacity + translate, never !important on animated props)
+        `@keyframes nh-lib-enter-up { from { opacity: 0; translate: 0 16px; } to { opacity: 1; translate: 0 0; } }`,
+        `@keyframes nh-lib-enter-left { from { opacity: 0; translate: -32px 0; } to { opacity: 1; translate: 0 0; } }`,
+        `@keyframes nh-lib-enter-right { from { opacity: 0; translate: 32px 0; } to { opacity: 1; translate: 0 0; } }`,
+        `@keyframes nh-lib-tab-in { from { opacity: 0; translate: 0 8px; } to { opacity: 1; translate: 0 0; } }`,
+        `.nh-lib-root.nh-lib-back .nh-lib-grid-shell { animation: nh-lib-enter-up 220ms cubic-bezier(.22, 1, .36, 1) backwards; }`,
+        `.nh-lib-root.nh-lib-back.nh-side-left .nh-lib-min-col { animation: nh-lib-enter-left 230ms cubic-bezier(.22, 1, .36, 1) backwards; }`,
+        `.nh-lib-root.nh-lib-back.nh-side-right .nh-lib-min-col { animation: nh-lib-enter-right 230ms cubic-bezier(.22, 1, .36, 1) backwards; }`,
+        `.nh-lib-root.nh-lib-back .nh-lib-min-info { animation: nh-lib-enter-up 220ms cubic-bezier(.22, 1, .36, 1) backwards; }`,
+        `.nh-lib-root .nh-lib-tab-stage { position: absolute; inset: 0; animation: nh-lib-tab-in 160ms ease-out; }`,
+        `.nh-lib-root.nh-lib-opening { pointer-events: none; }`,
+        `.nh-lib-root.nh-lib-opening .nh-lib-grid-shell { opacity: 0; translate: 0 24px; transition: opacity 180ms ease, translate 180ms cubic-bezier(.4, 0, 1, 1); }`,
+        `.nh-lib-root.nh-lib-opening.nh-side-left .nh-lib-min-col { opacity: 0; translate: -40px 0; transition: opacity 180ms ease, translate 180ms cubic-bezier(.4, 0, 1, 1); }`,
+        `.nh-lib-root.nh-lib-opening.nh-side-right .nh-lib-min-col { opacity: 0; translate: 40px 0; transition: opacity 180ms ease, translate 180ms cubic-bezier(.4, 0, 1, 1); }`,
+        `.nh-lib-root.nh-lib-opening .nh-lib-min-info { opacity: 0; translate: 0 14px; transition: opacity 160ms ease, translate 160ms ease; }`,
     ]
         .filter((s) => s.length > 0)
         .join('\n');

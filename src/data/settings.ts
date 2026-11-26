@@ -10,6 +10,17 @@ export type PluginLanguage = 'en' | 'ru';
 export type GamePageLayout = 'auto' | 'full' | 'minimal';
 export type LibraryLayout = 'auto' | 'grid' | 'minimal';
 export type LibraryGridSize = 'compact' | 'standard' | 'large';
+export type HeroPosition = 'center' | 'left' | 'right' | 'top' | 'bottom';
+
+export function heroPositionCss(position: HeroPosition): string {
+    switch (position) {
+        case 'left': return '0% 30%';
+        case 'right': return '100% 30%';
+        case 'top': return '50% 0%';
+        case 'bottom': return '50% 100%';
+        default: return '50% 30%';
+    }
+}
 
 export interface Settings {
     settingsVersion: number;
@@ -34,6 +45,7 @@ export interface Settings {
     customMenus: boolean; // restyle Steam main menu, Quick Access Menu, and context menus
     statusAvatar: boolean; // your avatar, round and ringed in your status colour, in the status bar instead of the dot
     hideGameCover: boolean; // hide the game's cover art on the game page
+    heroPosition: HeroPosition; // hero background alignment across Home, Library, and Game Page
     gameLogo: boolean; // the game's logo instead of its name on Home and the game page (the name when it has none)
     showNewLabel: boolean; // show the 'New' marker for games new to the library
     showLastPlayedLabel: boolean; // show the 'Last played' eyebrow on Home and the game page
@@ -68,6 +80,7 @@ const DEFAULTS: Settings = {
     customMenus: true,
     statusAvatar: false,
     hideGameCover: false,
+    heroPosition: 'center',
     gameLogo: true,
     showNewLabel: true,
     showLastPlayedLabel: true,
@@ -76,6 +89,12 @@ const DEFAULTS: Settings = {
     homeRowStyle: 'steam',
     screensaver: SCREENSAVER_DEFAULTS,
 };
+
+function heroPositionOf(value: unknown): HeroPosition {
+    return value === 'center' || value === 'left' || value === 'right' || value === 'top' || value === 'bottom'
+        ? value
+        : DEFAULTS.heroPosition;
+}
 
 function gamePageLayoutOf(value: unknown, cleanPage: unknown): GamePageLayout {
     if (value === 'auto' || value === 'full' || value === 'minimal') return value;
@@ -96,8 +115,23 @@ function libraryGridSizeOf(value: unknown): LibraryGridSize {
 
 export function createSettingsStore(kv: KvBackend) {
     let current: Settings = { ...DEFAULTS };
+    let saveChain: Promise<void> | null = null;
     const listeners = new Set<() => void>();
     const emit = () => listeners.forEach((listener) => listener());
+    const persist = (snapshot: Settings): Promise<void> => {
+        const run = () => kv.set(KEY, snapshot);
+        const next = saveChain ? saveChain.catch(() => undefined).then(run) : run();
+        const tracked = next.finally(() => {
+            if (saveChain === tracked) saveChain = null;
+        });
+        saveChain = tracked;
+        return next;
+    };
+    const update = (patch: Partial<Settings>): Promise<void> => {
+        current = { ...current, ...patch };
+        emit();
+        return persist(current);
+    };
     return {
         async load(): Promise<void> {
             const raw = (await kv.get(KEY)) as Partial<Settings> | null;
@@ -134,6 +168,7 @@ export function createSettingsStore(kv: KvBackend) {
                 customMenus: raw?.customMenus !== false,
                 statusAvatar: false,
                 hideGameCover: pick('hideGameCover'),
+                heroPosition: heroPositionOf(raw?.heroPosition),
                 gameLogo: pick('gameLogo'),
                 showNewLabel: pick('showNewLabel'),
                 showLastPlayedLabel: pick('showLastPlayedLabel'),
@@ -143,150 +178,45 @@ export function createSettingsStore(kv: KvBackend) {
                 screensaver: readScreensaverOptions(raw?.screensaver),
             };
             emit();
-            if (isLegacy) void kv.set(KEY, current).catch(() => undefined);
+            if (isLegacy) void persist(current).catch(() => undefined);
         },
         get: (): Settings => current,
-        async setLanguage(language: PluginLanguage): Promise<void> {
-            current = { ...current, language };
-            emit();
-            await kv.set(KEY, current);
-        },
-        async setMinimalShowDetails(minimalShowDetails: boolean): Promise<void> {
-            current = { ...current, minimalShowDetails };
-            emit();
-            await kv.set(KEY, current);
-        },
-        async setHomeLayout(homeLayout: HomeLayout): Promise<void> {
-            current = { ...current, homeLayout };
-            emit();
-            await kv.set(KEY, current);
-        },
-        async setMinimalSide(minimalSide: MinimalSide): Promise<void> {
-            current = { ...current, minimalSide };
-            emit();
-            await kv.set(KEY, current);
-        },
-        async setGamePageLayout(gamePageLayout: GamePageLayout): Promise<void> {
-            current = { ...current, gamePageLayout, cleanPage: gamePageLayout === 'minimal' };
-            emit();
-            await kv.set(KEY, current);
-        },
-        async setCustomLibrary(customLibrary: boolean): Promise<void> {
-            current = { ...current, customLibrary };
-            emit();
-            await kv.set(KEY, current);
-        },
-        async setLibraryLayout(libraryLayout: LibraryLayout): Promise<void> {
-            current = { ...current, libraryLayout };
-            emit();
-            await kv.set(KEY, current);
-        },
-        async setLibraryGridColumns(libraryGridColumns: number): Promise<void> {
-            current = { ...current, libraryGridColumns: libraryGridColumnsOf(libraryGridColumns) };
-            emit();
-            await kv.set(KEY, current);
-        },
-        async setLibraryGridSize(libraryGridSize: LibraryGridSize): Promise<void> {
-            current = { ...current, libraryGridSize: libraryGridSizeOf(libraryGridSize) };
-            emit();
-            await kv.set(KEY, current);
-        },
-        async setShowPlaytime(showPlaytime: boolean): Promise<void> {
-            current = { ...current, showPlaytime };
-            emit();
-            await kv.set(KEY, current);
-        },
-        async setShowHltb(showHltb: boolean): Promise<void> {
-            current = { ...current, showHltb };
-            emit();
-            await kv.set(KEY, current);
-        },
-        async setEnabled(enabled: boolean): Promise<void> {
-            current = { ...current, enabled };
-            emit();
-            await kv.set(KEY, current);
-        },
-        async setStatusAvatar(statusAvatar: boolean): Promise<void> {
-            current = { ...current, statusAvatar };
-            emit();
-            await kv.set(KEY, current);
-        },
-        async setHideStatusBarBackground(hideStatusBarBackground: boolean): Promise<void> {
-            current = { ...current, hideStatusBarBackground };
-            emit();
-            await kv.set(KEY, current);
-        },
-        async setCustomMenus(customMenus: boolean): Promise<void> {
-            current = { ...current, customMenus };
-            emit();
-            await kv.set(KEY, current);
-        },
-        async setHideGameCover(hideGameCover: boolean): Promise<void> {
-            current = { ...current, hideGameCover };
-            emit();
-            await kv.set(KEY, current);
-        },
-        async setAutoPreload(autoPreload: boolean): Promise<void> {
-            current = { ...current, autoPreload };
-            emit();
-            await kv.set(KEY, current);
-        },
-        async setSpotlightHome(spotlightHome: boolean): Promise<void> {
-            current = { ...current, spotlightHome };
-            emit();
-            await kv.set(KEY, current);
-        },
-        async setWishlistDeals(wishlistDeals: boolean): Promise<void> {
-            current = { ...current, wishlistDeals };
-            emit();
-            await kv.set(KEY, current);
-        },
-        async setHomeRow(homeRow: string): Promise<void> {
-            current = { ...current, homeRow };
-            emit();
-            await kv.set(KEY, current);
-        },
-        async setHomeRowSort(homeRowSort: RowSort): Promise<void> {
-            current = { ...current, homeRowSort };
-            emit();
-            await kv.set(KEY, current);
-        },
-        async setHomeRowStyle(homeRowStyle: RowStyle): Promise<void> {
-            current = { ...current, homeRowStyle };
-            emit();
-            await kv.set(KEY, current);
-        },
-        async setCleanPage(cleanPage: boolean): Promise<void> {
-            current = { ...current, cleanPage };
-            emit();
-            await kv.set(KEY, current);
-        },
-        async setHomeStatusBar(homeStatusBar: boolean): Promise<void> {
-            current = { ...current, homeStatusBar };
-            emit();
-            await kv.set(KEY, current);
-        },
-        async setGameLogo(gameLogo: boolean): Promise<void> {
-            current = { ...current, gameLogo };
-            emit();
-            await kv.set(KEY, current);
-        },
-        async setShowNewLabel(showNewLabel: boolean): Promise<void> {
-            current = { ...current, showNewLabel };
-            emit();
-            await kv.set(KEY, current);
-        },
-        async setShowLastPlayedLabel(showLastPlayedLabel: boolean): Promise<void> {
-            current = { ...current, showLastPlayedLabel };
-            emit();
-            await kv.set(KEY, current);
-        },
+        setLanguage: (language: PluginLanguage): Promise<void> => update({ language }),
+        setMinimalShowDetails: (minimalShowDetails: boolean): Promise<void> => update({ minimalShowDetails }),
+        setHomeLayout: (homeLayout: HomeLayout): Promise<void> => update({ homeLayout }),
+        setMinimalSide: (minimalSide: MinimalSide): Promise<void> => update({ minimalSide }),
+        setGamePageLayout: (gamePageLayout: GamePageLayout): Promise<void> =>
+            update({ gamePageLayout, cleanPage: gamePageLayout === 'minimal' }),
+        setCustomLibrary: (customLibrary: boolean): Promise<void> => update({ customLibrary }),
+        setLibraryLayout: (libraryLayout: LibraryLayout): Promise<void> => update({ libraryLayout }),
+        setLibraryGridColumns: (libraryGridColumns: number): Promise<void> =>
+            update({ libraryGridColumns: libraryGridColumnsOf(libraryGridColumns) }),
+        setLibraryGridSize: (libraryGridSize: LibraryGridSize): Promise<void> =>
+            update({ libraryGridSize: libraryGridSizeOf(libraryGridSize) }),
+        setShowPlaytime: (showPlaytime: boolean): Promise<void> => update({ showPlaytime }),
+        setShowHltb: (showHltb: boolean): Promise<void> => update({ showHltb }),
+        setEnabled: (enabled: boolean): Promise<void> => update({ enabled }),
+        setStatusAvatar: (statusAvatar: boolean): Promise<void> => update({ statusAvatar }),
+        setHideStatusBarBackground: (hideStatusBarBackground: boolean): Promise<void> => update({ hideStatusBarBackground }),
+        setCustomMenus: (customMenus: boolean): Promise<void> => update({ customMenus }),
+        setHideGameCover: (hideGameCover: boolean): Promise<void> => update({ hideGameCover }),
+        setHeroPosition: (heroPosition: HeroPosition): Promise<void> =>
+            update({ heroPosition: heroPositionOf(heroPosition) }),
+        setAutoPreload: (autoPreload: boolean): Promise<void> => update({ autoPreload }),
+        setSpotlightHome: (spotlightHome: boolean): Promise<void> => update({ spotlightHome }),
+        setWishlistDeals: (wishlistDeals: boolean): Promise<void> => update({ wishlistDeals }),
+        setHomeRow: (homeRow: string): Promise<void> => update({ homeRow }),
+        setHomeRowSort: (homeRowSort: RowSort): Promise<void> => update({ homeRowSort }),
+        setHomeRowStyle: (homeRowStyle: RowStyle): Promise<void> => update({ homeRowStyle }),
+        setCleanPage: (cleanPage: boolean): Promise<void> =>
+            update({ cleanPage, gamePageLayout: cleanPage ? 'minimal' : 'full' }),
+        setHomeStatusBar: (homeStatusBar: boolean): Promise<void> => update({ homeStatusBar }),
+        setGameLogo: (gameLogo: boolean): Promise<void> => update({ gameLogo }),
+        setShowNewLabel: (showNewLabel: boolean): Promise<void> => update({ showNewLabel }),
+        setShowLastPlayedLabel: (showLastPlayedLabel: boolean): Promise<void> => update({ showLastPlayedLabel }),
         /** One or more screensaver options. */
-        async setScreensaver(change: Partial<ScreensaverOptions>): Promise<void> {
-            current = { ...current, screensaver: { ...current.screensaver, ...change } };
-            emit();
-            await kv.set(KEY, current);
-        },
+        setScreensaver: (change: Partial<ScreensaverOptions>): Promise<void> =>
+            update({ screensaver: { ...current.screensaver, ...change } }),
         subscribe(listener: () => void): () => void {
             listeners.add(listener);
             return () => listeners.delete(listener);
