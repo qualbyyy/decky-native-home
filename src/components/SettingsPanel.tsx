@@ -1,7 +1,8 @@
 import { toaster } from '@decky/api';
-import { ButtonItem, DropdownItem, PanelSection, PanelSectionRow, ToggleField } from '@decky/ui';
+import { ButtonItem, DropdownItem, PanelSection, PanelSectionRow, showModal, ToggleField } from '@decky/ui';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { PLUGIN_NAME } from '../constants';
+import { CustomTabsModal } from './CustomTabsModal';
 import { cache } from '../data/cache';
 import { checkRepositoryUpdate, RepositoryUpdateState } from '../data/repositoryUpdate';
 import { GamePageLayout, HeroPosition, HomeLayout, LibraryGridSize, LibraryLayout, MinimalSide, settings, useSettings } from '../data/settings';
@@ -37,6 +38,9 @@ const LABELS = {
         large: 'Large',
         followHome: 'Follow Home',
         coverGrid: 'Cover grid',
+        tabMasterIntegration: 'TabMaster tabs integration',
+        showHiddenTab: 'Show Hidden Games tab',
+        manageCustomTabs: 'Manage custom tabs',
         gamePage: 'Game Page',
         enableGamePage: 'Built-in game page',
         gamePageMode: 'Game page style',
@@ -92,6 +96,9 @@ const LABELS = {
         large: 'Большие',
         followHome: 'Как на главной',
         coverGrid: 'Сетка обложек',
+        tabMasterIntegration: 'Интеграция вкладок TabMaster',
+        showHiddenTab: 'Показывать вкладку «Скрытые»',
+        manageCustomTabs: 'Настроить свои вкладки',
         gamePage: 'Страница игры',
         enableGamePage: 'Встроенная страница игры',
         gamePageMode: 'Стиль страницы игры',
@@ -133,6 +140,9 @@ export function SettingsPanel() {
         libraryLayout,
         libraryGridColumns,
         libraryGridSize,
+        libraryTabMaster,
+        libraryShowHiddenTab,
+        customLibraryTabs,
         spotlightHome,
         homeLayout,
         minimalSide,
@@ -153,7 +163,8 @@ export function SettingsPanel() {
     } = useSettings();
     const knownLang = peekSteamLanguage();
     const loadedLang = useAsync(knownLang ? null : 'lang', getSteamLanguage);
-    const t = LABELS[(knownLang ?? loadedLang ?? '').toLowerCase().startsWith('ru') || isRussianSystem() ? 'ru' : 'en'];
+    const isRu = (knownLang ?? loadedLang ?? '').toLowerCase().startsWith('ru') || isRussianSystem();
+    const t = LABELS[isRu ? 'ru' : 'en'];
     const qamMarkerRef = useRef<HTMLSpanElement | null>(null);
     const mountedRef = useRef(true);
     useEffect(() => () => { mountedRef.current = false; }, []);
@@ -319,6 +330,41 @@ export function SettingsPanel() {
                                 </PanelSectionRow>
                             </>
                         )}
+                        <PanelSectionRow>
+                            <ToggleField
+                                label={t.tabMasterIntegration}
+                                checked={libraryTabMaster}
+                                onChange={(value) => settings.setLibraryTabMaster(value)}
+                            />
+                        </PanelSectionRow>
+                        <PanelSectionRow>
+                            <ToggleField
+                                label={t.showHiddenTab}
+                                checked={libraryShowHiddenTab}
+                                onChange={(value) => settings.setLibraryShowHiddenTab(value)}
+                            />
+                        </PanelSectionRow>
+                        {customLibraryTabs.map((tab) => (
+                            <PanelSectionRow key={tab.id}>
+                                <ToggleField
+                                    label={tab.title}
+                                    checked={tab.enabled}
+                                    onChange={(value) =>
+                                        settings.setCustomLibraryTabs(
+                                            customLibraryTabs.map((item) => (item.id === tab.id ? { ...item, enabled: value } : item)),
+                                        )
+                                    }
+                                />
+                            </PanelSectionRow>
+                        ))}
+                        <PanelSectionRow>
+                            <ButtonItem
+                                layout="below"
+                                onClick={() => showModal(<CustomTabsModal ru={isRu} />)}
+                            >
+                                {t.manageCustomTabs}
+                            </ButtonItem>
+                        </PanelSectionRow>
                     </>
                 )}
             </PanelSection>

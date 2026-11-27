@@ -9,6 +9,7 @@ from nativehome.home_errors import FILE_NAME, append_log, start_entry
 from nativehome.kv import KvStore
 from nativehome.migrate import carry_over, old_data_path
 from nativehome.store_lookup import RegistryCache, key_for_appid, store_for_appid
+from nativehome.tabmaster import TabMasterReader
 
 DATA_PATH = os.path.join(decky.DECKY_PLUGIN_SETTINGS_DIR, "data.json")
 if carry_over(old_data_path(decky.DECKY_PLUGIN_SETTINGS_DIR), DATA_PATH):
@@ -16,6 +17,9 @@ if carry_over(old_data_path(decky.DECKY_PLUGIN_SETTINGS_DIR), DATA_PATH):
 KV = KvStore(DATA_PATH)
 REGISTRY = RegistryCache(
     os.path.join(decky.DECKY_USER_HOME, ".local", "share", "unifideck", "shortcuts_registry.json")
+)
+TABMASTER = TabMasterReader(
+    os.path.join(os.path.dirname(decky.DECKY_PLUGIN_SETTINGS_DIR), "TabMaster", "settings.json")
 )
 
 HEROIC = HeroicLibrary(heroic_cache_dirs(decky.DECKY_USER_HOME))
@@ -78,6 +82,15 @@ class Plugin:
             return HEROIC.description(runner, app_name)
         except Exception:
             decky.logger.exception("[native-home] get_heroic_description failed")
+            return None
+
+    async def get_tabmaster_config(self, user_id: str = ""):
+        if not isinstance(user_id, str):
+            user_id = ""
+        try:
+            return TABMASTER.read_user_config(user_id)
+        except Exception:
+            decky.logger.exception("[native-home] get_tabmaster_config failed")
             return None
 
     async def log_home_error(self, entry: str) -> None:

@@ -109,6 +109,14 @@ export function openMotion(home: HomeRects, page: PageTargets, look: PageLook, c
         // as wide as the page's once the circle has grown onto it (Home's 2 canvas px ended at 1.15 CSS px handheld).
         out['--gho-uni-ring'] ??= px((UNIFIDECK_RING_PX * (circle.w / s)) / to.w);
     });
+    // Positioned square action slots on the target Game Page (slot 0 = controller, slot 1 = settings, slot 3 = extra).
+    for (const idx of [0, 1] as const) {
+        const c = page.circles[idx];
+        if (!c) continue;
+        out[`--gho-circle-${idx}-x`] = k((c.x - home.canvas.x) / s);
+        out[`--gho-circle-${idx}-y`] = k((c.y - home.canvas.y) / s);
+        out[`--gho-circle-${idx}-w`] = k(c.w / s);
+    }
     // The page's fourth circle (a Unifideck game's Uninstall, after controller, settings and cloud): Home draws one there as
     // it opens (homeCss .gh-open-circle), in canvas px like the glass panels.
     const extra = page.circles[3];

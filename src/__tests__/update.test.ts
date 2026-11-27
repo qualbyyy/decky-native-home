@@ -16,6 +16,9 @@ import {
     nextLibrarySort,
     readLibrarySnapshot,
 } from '../library/libraryData';
+import { evaluateTabMasterTabs } from '../library/tabMaster';
+import { openMotion } from '../home/openMotion';
+import { pageTargets } from '../home/openTargets';
 import { libraryButtonAction, visibleRowRange } from '../library/libraryNav';
 import { insertHero } from '../patches/insertHero';
 import { createAfterPatchGuard } from '../patches/patchOnce';
@@ -643,5 +646,176 @@ describe('audit regression checks', () => {
         expect(lib).toContain('.nh-lib-root.nh-lib-opening .nh-lib-grid-shell');
         expect(lib).toContain('.nh-lib-root .nh-lib-tab-stage');
         expect(lib).not.toMatch(/(?:^|[\s;{])(transform|opacity)\s*:[^;]*!important/);
+    });
+});
+
+describe('TabMaster, custom library tabs, hidden games, sub-tabs & open skeleton', () => {
+    const richGlobals = {
+        appStore: {
+            allApps: [
+                { appid: 10, display_name: 'Visible Indie', app_type: 1, rt_last_time_played: 200, minutes_playtime_forever: 45, installed: true, steam_deck_compat_category: 3, store_tag: [492] },
+                { appid: 20, display_name: 'Hidden Gem', app_type: 1, rt_last_time_played: 50, minutes_playtime_forever: 0, installed: false, steam_deck_compat_category: 2, store_tag: [19] },
+                { appid: 30, display_name: 'Non-Steam App', app_type: 1073741824, rt_last_time_played: 10, minutes_playtime_forever: 0, installed: true },
+            ],
+        },
+        collectionStore: {
+            localGamesCollection: { allApps: [{ appid: 10 }, { appid: 30 }] },
+            userCollections: [{ id: 'uc-1', displayName: 'Backlog', allApps: [{ appid: 10 }, { appid: 20 }] }],
+            BIsHidden: (id: number) => id === 20,
+        },
+    };
+
+    it('keeps hidden games isolated and exposes them via showHiddenTab or custom tabs', () => {
+        const snap = readLibrarySnapshot('en', richGlobals, {
+            showHiddenTab: true,
+            customTabs: [
+                {
+                    id: 'unplayed-deck',
+                    title: 'Unplayed Verified',
+                    enabled: true,
+                    mode: 'all',
+                    deckCompat: 'verified',
+                    unplayedOnly: true,
+                    hiddenMode: 'exclude',
+                },
+                {
+                    id: 'hidden-only',
+                    title: 'Secret',
+                    enabled: true,
+                    mode: 'all',
+                    hiddenMode: 'only',
+                },
+            ],
+        });
+
+        expect(snap.games.map((g) => g.appId)).toEqual([10, 30]);
+        const hiddenTab = snap.tabs.find((t) => t.id === 'hidden');
+        expect(hiddenTab?.count).toBe(1);
+        expect(filterAndSortLibraryGames(snap.allGames, hiddenTab, false, 'name').map((g) => g.appId)).toEqual([20]);
+
+        const allTab = snap.tabs.find((t) => t.id === 'all');
+        expect(filterAndSortLibraryGames(snap.allGames, allTab, false, 'name').map((g) => g.appId)).toEqual([30, 10]);
+
+        const secretTab = snap.tabs.find((t) => t.id === 'custom:hidden-only');
+        expect(secretTab?.count).toBe(1);
+        expect(filterAndSortLibraryGames(snap.allGames, secretTab, false, 'name').map((g) => g.appId)).toEqual([20]);
+    });
+
+    it('gives TabMaster tabs priority, honors position & visibility, and evaluates hidden/filter tabs', () => {
+        const tmConfig = {
+            available: true,
+            tagOverrides: { '20': { '492': true } },
+            tabs: {
+                HiddenToggleOff: {
+                    id: 'HiddenToggleOff',
+                    title: 'Toggled Off',
+                    position: -1,
+                    categoriesToInclude: 17,
+                    filters: [],
+                },
+                HiddenGames: {
+                    id: 'HiddenGames',
+                    title: 'Hidden Games',
+                    position: 1,
+                    categoriesToInclude: 17,
+                    filtersMode: 'and' as const,
+                    filters: [
+                        { type: 'tags', inverted: false, params: { tags: [492], mode: 'and' } },
+                    ],
+                },
+                Installed: {
+                    id: 'Installed',
+                    title: 'Installed',
+                    position: 0,
+                },
+            },
+        };
+
+        const tm = evaluateTabMasterTabs(
+            tmConfig,
+            richGlobals.appStore.allApps,
+            new Set([10, 30]),
+            richGlobals.collectionStore.BIsHidden,
+            richGlobals,
+        );
+        expect(tm.tabs.map((t) => t.id)).toEqual(['tm:Installed', 'tm:HiddenGames']);
+        expect(tm.tabs[1].includeHidden).toBe(true);
+        expect([...(tm.tabs[1].appIds ?? [])]).toEqual([10, 20]);
+
+        const snap = readLibrarySnapshot('en', richGlobals, { tabMasterConfig: tmConfig, useTabMaster: true });
+        expect(snap.tabs.map((t) => t.id)).toEqual(['tm:Installed', 'tm:HiddenGames']);
+    });
+
+    it('persists new library tab settings cleanly', async () => {
+        const kv = memoryKv(null);
+        const store = createSettingsStore(kv);
+        await store.load();
+        expect(store.get().libraryTabMaster).toBe(true);
+        expect(store.get().libraryShowHiddenTab).toBe(false);
+        expect(store.get().customLibraryTabs).toEqual([]);
+
+        await store.setLibraryShowHiddenTab(true);
+        await store.setCustomLibraryTabs([
+            { id: 'c1', title: 'Cozy', enabled: true, mode: 'all', deckCompat: 'verified', hiddenMode: 'exclude' },
+        ]);
+        expect(store.get().libraryShowHiddenTab).toBe(true);
+        expect(store.get().customLibraryTabs).toHaveLength(1);
+    });
+
+    it('styles Game Page sub-tabs adaptively for Full and Minimalist modes and computes skeleton button slots', () => {
+        const fullClasses: ThemeClasses = {
+            header: { TopCapsule: 'TopCapsule', BoxSizer: 'BoxSizer', TitleImageContainer: 'TitleImg', SVGTitle: 'SvgTitle' },
+            details: { InnerContainer: 'Inner', AppDetailsOverviewPanel: 'Overview' },
+            overview: {},
+            root: { AppDetailsContainer: 'AppDetails', AppDetailsContent: 'AppContent', PlaySection: 'PlaySection', ActionButtonAndStatusPanel: 'PlayBtn', AppButtons: 'AppButtons' },
+            play: { MenuButton: 'MenuBtn', CloudStatusRow: 'CloudRow', CloudStatusIcon: 'CloudIcon' },
+            tabbedPage: { GamepadTabbedPage: 'GTP', TabHeaderRowWrapper: 'THRW', Floating: 'Float', TabRowSpacer: 'TRS', TabRowTabs: 'TRT', Tab: 'Tab', Selected: 'Sel', TabContents: 'TC', TabContentsScroll: 'TCS', LeftAddon: 'LA', RightAddon: 'RA' },
+            section: { AppDetailsSectionContainer: 'SectionCard' },
+        };
+
+        const fullCss = buildThemeCss(fullClasses, { restyle: true, minimal: false });
+        expect(fullCss).toContain('.AppDetails .GTP');
+        expect(fullCss).toContain('display: flex !important; flex-direction: column !important');
+        expect(fullCss).toContain('.AppDetails .THRW.Float');
+        expect(fullCss).toContain('position: relative !important; top: auto !important');
+        expect(fullCss).toContain('.AppDetails .TRS');
+        expect(fullCss).toContain('display: none !important');
+        expect(fullCss).toContain('.AppDetails .Tab.Sel:not(.gpfocus):not(:focus):not(:hover)');
+        expect(fullCss).toContain('border-color: var(--ctp-surface2');
+        expect(fullCss).toContain('.AppDetails .SectionCard');
+
+        const minCss = buildThemeCss(fullClasses, { restyle: true, minimal: true });
+        expect(minCss).toContain('border-bottom-color: var(--ctp-accent-color');
+
+        const hCss = homeCss();
+        expect(hCss).toContain('border-left: 3px solid var(--ctp-accent-color');
+        expect(hCss).toContain('grid-template-columns: minmax(0, 1.12fr) minmax(0, 0.88fr)');
+
+        const screen = { width: 1280, height: 800, dpr: 1 };
+        const targets = pageTargets('spotlight', screen, [], () => 0, { w: 0, h: 0 });
+        const noEyebrowTargets = pageTargets('spotlight', screen, [], () => 0, { w: 0, h: 0 }, undefined, undefined, false);
+        expect(targets.circles.length).toBeGreaterThanOrEqual(2);
+        expect(targets.shells).toHaveLength(1);
+        expect(noEyebrowTargets.titleBottomLeft.y).toBe(noEyebrowTargets.eyebrowBottomLeft.y);
+        expect(noEyebrowTargets.titleBottomLeft.y).toBeGreaterThan(targets.titleBottomLeft.y);
+
+        const vars = openMotion(
+            {
+                root: { x: 0, y: 0, w: 1280, h: 800 },
+                canvas: { x: 0, y: 0, w: 1280, h: 800 },
+                titleSlot: { x: 40, y: 300, w: 400, h: 50 },
+                eyebrow: { x: 40, y: 360, w: 200, h: 16 },
+                play: { x: 40, y: 400, w: 180, h: 44 },
+                circles: [],
+                infoCircle: null,
+                store: null,
+                chips: [],
+            },
+            targets,
+            'spotlight',
+            1,
+        );
+        expect(vars.some((v) => v.name === '--gho-circle-0-x')).toBe(true);
+        expect(vars.some((v) => v.name === '--gho-circle-1-x')).toBe(true);
     });
 });

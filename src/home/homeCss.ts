@@ -572,7 +572,7 @@ export function openingRules(heroPos: string = heroPositionCss('center')): strin
     const move = `transform ${T.morph}ms ${MORPH_EASE}`;
     const play = '.gh-actions > .gh-btn[data-action="play"]';
     const shell = (i: number) => [
-        rule(`${M}${i === 1 ? '[data-gh-shells="2"]' : ''} .gh-open-shell[data-i="${i}"]`, `display: block; left: calc(var(--gho-shell-${i}-x) * 1px); top: calc(var(--gho-shell-${i}-y) * 1px);
+        rule(`${M}${i === 1 ? '[data-gh-shells="2"]' : ''} .gh-open-shell[data-i="${i}"]`, `display: grid; left: calc(var(--gho-shell-${i}-x) * 1px); top: calc(var(--gho-shell-${i}-y) * 1px);
             width: calc(var(--gho-shell-${i}-w) * 1px); height: calc(var(--gho-shell-${i}-h) * 1px); transform: var(--gho-shell-${i}-from); opacity: var(--gho-shell-${i}-o0)`),
         rule(`${MT}${i === 1 ? '[data-gh-shells="2"]' : ''} .gh-open-shell[data-i="${i}"]`, `transform: none; opacity: 1; transition: ${move}, opacity ${T.morph}ms ease`),
     ];
@@ -613,17 +613,29 @@ export function openingRules(heroPos: string = heroPositionCss('center')): strin
         // on the Ally: moving blurred felt more seamless than a blur growing in after the hand-over). 16 canvas px is the page's
         // 16 d units. Its ring is Home's 1px, so it looks like the chips' all the way: Chromium snaps a border to whole device px
         // in the canvas's own units, before the scale, so the page's 1 device px drawn in here came out half as bright on the Ally.
-        rule('.gh-open-shell', 'display: none; position: absolute; left: 0; top: 0; margin: 0; padding: 0; pointer-events: none; transform-origin: 0 0; border-radius: 0px; background: var(--ctp-surface0, rgba(20,28,38,.85)); border: 1px solid var(--ctp-surface2, rgba(255,255,255,.14)); backdrop-filter: none'),
+        rule('.gh-open-shell', `display: none; position: absolute; left: 0; top: 0; margin: 0; padding: 14px 18px; box-sizing: border-box; pointer-events: none; transform-origin: 0 0;
+            border-radius: 0px; background: var(--ctp-surface0, rgba(20,28,38,.85)); border: 1px solid var(--ctp-surface2, rgba(255,255,255,.14));
+            border-left: 3px solid var(--ctp-accent-color, var(--glance-accent, #1a9fff)); backdrop-filter: none;
+            grid-template-columns: minmax(0, 1.12fr) minmax(0, 0.88fr); gap: 18px; align-content: start`),
+        rule('.gh-open-shell-col', 'display: flex; flex-direction: column; gap: 10px; min-width: 0'),
+        rule('.gh-open-line', 'display: block; border-radius: 0px; background: var(--ctp-surface1, rgba(255,255,255,.09))'),
+        rule('.gh-open-line.is-kicker', 'width: 34%; height: 10px; background: var(--ctp-surface2, rgba(255,255,255,.14))'),
+        rule('.gh-open-line.is-main', 'width: 86%; height: 14px'),
+        rule('.gh-open-line.is-sub', 'width: 62%; height: 12px'),
+        rule('.gh-open-line.is-card', 'width: 100%; height: 58px'),
         // A Unifideck game's page has a fourth circle (Uninstall) Home has no button for: one is drawn at its place as Home's
         // circles look at the page's size, and fades in late as the page's other parts do, so it does not pop in after the
         // hand-over. Its own fade, not the extras layer's: a backdrop blur inside a fading parent sees nothing behind it.
         rule('.gh-open-circle', `display: none; position: absolute; left: 0; top: 0; margin: 0; padding: 0; pointer-events: none; box-sizing: border-box; aspect-ratio: 1;
-            align-items: center; justify-content: center; border-radius: 0px; color: #fff; background: rgba(12,16,22,.4); border: 1px solid rgba(255,255,255,.18);
-            backdrop-filter: blur(12px); opacity: 0`),
+            align-items: center; justify-content: center; border-radius: 0px; color: var(--ctp-text, #fff); background: var(--ctp-surface0, rgba(20,28,38,.88)); border: 1px solid var(--ctp-surface2, rgba(255,255,255,.16));
+            backdrop-filter: none; opacity: 0`),
         rule('.gh-open-circle svg', `width: ${PAGE_LAYOUT.circleIcon}px; height: ${PAGE_LAYOUT.circleIcon}px; margin: 0; fill: currentColor`),
         rule(`${M} .gh-open-circle`, 'display: flex; left: calc(var(--gho-circle-extra-x) * 1px); top: calc(var(--gho-circle-extra-y) * 1px); width: calc(var(--gho-circle-extra-w) * 1px)'),
+        rule(`${M} .gh-open-circle.gh-open-slot-0`, 'left: calc(var(--gho-circle-0-x) * 1px); top: calc(var(--gho-circle-0-y) * 1px); width: calc(var(--gho-circle-0-w) * 1px)'),
+        rule(`${M} .gh-open-circle.gh-open-slot-1`, 'left: calc(var(--gho-circle-1-x) * 1px); top: calc(var(--gho-circle-1-y) * 1px); width: calc(var(--gho-circle-1-w) * 1px)'),
         rule(`${MT} .gh-open-circle`, late('gh-open-extras-in')),
         rule('.gh-root.gh-bridge[data-gh-opening][data-gh-phase] .gh-open-circle', 'opacity: 1; animation: none'),
+        rule('.gh-root.gh-bridge[data-gh-opening][data-gh-phase] .gh-open-shell', 'opacity: 1; transform: none; animation: none'),
         rule(O, 'pointer-events: none'),
         // The bridge (openBridge): a frozen copy of Home in its final state; nothing inside it may animate again.
         rule('.gh-root.gh-bridge, .gh-root.gh-bridge *', 'animation: none; transition: none'),

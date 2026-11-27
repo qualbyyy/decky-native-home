@@ -12,6 +12,19 @@ export type LibraryLayout = 'auto' | 'grid' | 'minimal';
 export type LibraryGridSize = 'compact' | 'standard' | 'large';
 export type HeroPosition = 'center' | 'left' | 'right' | 'top' | 'bottom';
 
+export interface CustomLibraryTab {
+    id: string;
+    title: string;
+    enabled: boolean;
+    mode: 'all' | 'any';
+    installed?: 'any' | 'installed' | 'uninstalled';
+    platform?: 'any' | 'steam' | 'nonsteam';
+    deckCompat?: 'any' | 'verified' | 'playable';
+    unplayedOnly?: boolean;
+    collectionId?: string;
+    hiddenMode?: 'exclude' | 'include' | 'only';
+}
+
 export function heroPositionCss(position: HeroPosition): string {
     switch (position) {
         case 'left': return '0% 30%';
@@ -36,6 +49,9 @@ export interface Settings {
     libraryLayout: LibraryLayout;
     libraryGridColumns: number;
     libraryGridSize: LibraryGridSize;
+    libraryTabMaster: boolean;
+    libraryShowHiddenTab: boolean;
+    customLibraryTabs: CustomLibraryTab[];
     showPlaytime: boolean;
     showHltb: boolean;
     wishlistDeals: boolean; // look up wishlist sales on Steam's public store
@@ -71,6 +87,9 @@ const DEFAULTS: Settings = {
     libraryLayout: 'auto',
     libraryGridColumns: 6,
     libraryGridSize: 'standard',
+    libraryTabMaster: true,
+    libraryShowHiddenTab: false,
+    customLibraryTabs: [],
     showPlaytime: true,
     showHltb: true,
     wishlistDeals: false,
@@ -111,6 +130,33 @@ function libraryGridColumnsOf(value: unknown): number {
 
 function libraryGridSizeOf(value: unknown): LibraryGridSize {
     return value === 'compact' || value === 'standard' || value === 'large' ? value : DEFAULTS.libraryGridSize;
+}
+
+function customLibraryTabsOf(value: unknown): CustomLibraryTab[] {
+    if (!Array.isArray(value)) return [];
+    const seen = new Set<string>();
+    const out: CustomLibraryTab[] = [];
+    for (const raw of value) {
+        if (!raw || typeof raw !== 'object') continue;
+        const t = raw as Partial<CustomLibraryTab>;
+        const id = typeof t.id === 'string' && t.id.trim() !== '' ? t.id.trim() : '';
+        const title = typeof t.title === 'string' ? t.title.trim() : '';
+        if (!id || !title || seen.has(id)) continue;
+        seen.add(id);
+        out.push({
+            id,
+            title,
+            enabled: t.enabled !== false,
+            mode: t.mode === 'any' ? 'any' : 'all',
+            installed: t.installed === 'installed' || t.installed === 'uninstalled' ? t.installed : 'any',
+            platform: t.platform === 'steam' || t.platform === 'nonsteam' ? t.platform : 'any',
+            deckCompat: t.deckCompat === 'verified' || t.deckCompat === 'playable' ? t.deckCompat : 'any',
+            unplayedOnly: t.unplayedOnly === true,
+            collectionId: typeof t.collectionId === 'string' && t.collectionId !== '' ? t.collectionId : undefined,
+            hiddenMode: t.hiddenMode === 'include' || t.hiddenMode === 'only' ? t.hiddenMode : 'exclude',
+        });
+    }
+    return out;
 }
 
 export function createSettingsStore(kv: KvBackend) {
@@ -159,6 +205,9 @@ export function createSettingsStore(kv: KvBackend) {
                 libraryLayout: libraryLayoutOf(raw?.libraryLayout),
                 libraryGridColumns: libraryGridColumnsOf(raw?.libraryGridColumns),
                 libraryGridSize: libraryGridSizeOf(raw?.libraryGridSize),
+                libraryTabMaster: raw?.libraryTabMaster !== false,
+                libraryShowHiddenTab: pick('libraryShowHiddenTab'),
+                customLibraryTabs: customLibraryTabsOf(raw?.customLibraryTabs),
                 showPlaytime: pick('showPlaytime'),
                 showHltb: pick('showHltb'),
                 wishlistDeals: false,
@@ -193,6 +242,10 @@ export function createSettingsStore(kv: KvBackend) {
             update({ libraryGridColumns: libraryGridColumnsOf(libraryGridColumns) }),
         setLibraryGridSize: (libraryGridSize: LibraryGridSize): Promise<void> =>
             update({ libraryGridSize: libraryGridSizeOf(libraryGridSize) }),
+        setLibraryTabMaster: (libraryTabMaster: boolean): Promise<void> => update({ libraryTabMaster }),
+        setLibraryShowHiddenTab: (libraryShowHiddenTab: boolean): Promise<void> => update({ libraryShowHiddenTab }),
+        setCustomLibraryTabs: (customLibraryTabs: CustomLibraryTab[]): Promise<void> =>
+            update({ customLibraryTabs: customLibraryTabsOf(customLibraryTabs) }),
         setShowPlaytime: (showPlaytime: boolean): Promise<void> => update({ showPlaytime }),
         setShowHltb: (showHltb: boolean): Promise<void> => update({ showHltb }),
         setEnabled: (enabled: boolean): Promise<void> => update({ enabled }),

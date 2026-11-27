@@ -29,6 +29,8 @@ import { InlineChips, TitleBlock } from './TitleBlock';
 import { useBumperSelect, useDirectionSelect, useVerticalDirectionSelect } from './useBumperSelect';
 import { useHomeData } from './useHomeData';
 import { collectionEyebrow } from './collections';
+import { homeMode } from './mode';
+import { OpenMorphSkeleton } from './OpenSkeleton';
 import { preloadLogos } from './logoArt';
 import { tr } from '../i18n/steamText';
 
@@ -101,8 +103,10 @@ function useBoxSize(ref: RefObject<HTMLDivElement | null>): Size | null {
 export function SpotlightHome() {
     const [recentIndex, setRecentIndex] = useState(0);
     const [restore] = useState(takeRestore);
-    const { gameLogo, showNewLabel, showLastPlayedLabel, homeRowStyle, homeLayout, minimalSide, minimalShowDetails, showPlaytime, showHltb, hideStatusBarBackground, heroPosition } = useSettings();
+    const allSettings = useSettings();
+    const { gameLogo, showNewLabel, showLastPlayedLabel, homeRowStyle, homeLayout, minimalSide, minimalShowDetails, showPlaytime, showHltb, hideStatusBarBackground, heroPosition } = allSettings;
     const showHeroPanel = homeLayout !== 'minimal' || minimalShowDetails;
+    const minimalPage = homeMode(allSettings).minimalDetails;
     const [resolved, setResolved] = useState(restore === null);
     const [restoring, setRestoring] = useState(restore !== null);
     const [back, setBack] = useState(restore !== null);
@@ -508,6 +512,7 @@ export function SpotlightHome() {
                         ) : null}
                     </div>
                 </div>
+                {contentUp && game && showHeroPanel && !onLibrary && <OpenMorphSkeleton minimalDetails={minimalPage} />}
             </div>
         </div>
     );

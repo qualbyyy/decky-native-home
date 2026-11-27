@@ -22,6 +22,17 @@ export interface ThemeClasses {
     transition?: ClassMap; // Steam's top-level page transition module: TopLevelTransition, Enter, EnterActive (its page-enter fade)
     footer?: ClassMap; // Steam's footer module: BasicFooter, FooterLegend (the button legend along the bottom of every page)
     feedback?: ClassMap; // Steam Deck compatibility feedback banner inside AppDetailsOverviewPanel
+    tabbedPage?: ClassMap; // gamepadTabbedPageClasses: GamepadTabbedPage, TabHeaderRowWrapper, TabRow, Tab, Selected, TabContents
+    section?: ClassMap; // AppDetailsSection, AppDetailsSectionContainer, RightColumnSection, Highlight, Body
+    activity?: ClassMap; // ActivityFeedContainer, PostTextEntry, PostTextEntryArea
+    event?: ClassMap; // Event, EventHeadline, EventBody, AppActivityDay, AppActivityDate
+    deckVerified?: ClassMap; // DeckVerifiedInfo, Details
+    achievements?: ClassMap; // achievementListClasses: AchievementListItemBase, AchievementCarouselItem
+    achProgress?: ClassMap; // AchievementProgressContainer, AchievementProgress
+    summaryCarousel?: ClassMap; // SummaryCarouselContainer
+    friendsSection?: ClassMap; // FriendsSectionPlayingNow, PlayingNowBody
+    community?: ClassMap; // CommunityItem
+    dialog?: ClassMap; // gamepadDialogClasses: DialogButton
 }
 
 function cls(map: ClassMap, key: string): string | null {
@@ -639,7 +650,216 @@ export function buildLaunchCss(classes: ThemeClasses): string {
  * Uses Deck-native squircle geometry (`--gruvbox-radius, 8px`), theme-native `--ctp-*` tokens,
  * and zero Game Glance dual-floating-card pills.
  */
-function restyleRules({ header, details, root, play, shared, feedback }: ThemeClasses, layout: boolean, minimal: boolean): string[] {
+/**
+ * Styles the lower Game Details tabbed area (Activity, Your Stuff, Community, Game Info) inside AppDetailsContainer.
+ * Adapts the tab strip between Full square block tabs and Minimalist underline tabs based on global page layout.
+ */
+function lowerDetailsRules(classes: ThemeClasses, minimal: boolean): string[] {
+    const { root, play, tabbedPage, section, activity, event, deckVerified, achievements, achProgress, summaryCarousel, friendsSection, community, dialog } = classes;
+    const tabsContainer = cls(root, 'AppDetailsContainer');
+    const appContent = cls(root, 'AppDetailsContent');
+    const sectionList = cls(root, 'AppDetailSectionList');
+    const gameInfoContainer = cls(root, 'GameInfoContainer');
+    const appDetailsBtn = cls(root, 'AppActionButton');
+    if (!tabsContainer && !tabbedPage) return [];
+
+    const scope = tabsContainer ?? cls(root, 'AppDetailsRoot') ?? '';
+    const scoped = (sel: string | null | undefined) => (sel ? (scope ? `${scope} ${sel}` : sel) : null);
+
+    const gtp = cls(tabbedPage, 'GamepadTabbedPage');
+    const tabHeaderWrapper = cls(tabbedPage, 'TabHeaderRowWrapper');
+    const tabHeaderFloating = cls(tabbedPage, 'Floating');
+    const tabRowSpacer = cls(tabbedPage, 'TabRowSpacer');
+    const tabRow = cls(tabbedPage, 'TabRow');
+    const tabRowTabs = cls(tabbedPage, 'TabRowTabs');
+    const tabsScroll = cls(tabbedPage, 'TabsRowScroll');
+    const tab = cls(tabbedPage, 'Tab');
+    const tabSelected = cls(tabbedPage, 'Selected');
+    const tabCount = cls(tabbedPage, 'TabCount');
+    const tabCountBadge = cls(tabbedPage, 'TabCountBadge');
+    const tabTitle = cls(tabbedPage, 'TabTitle');
+    const leftAddon = cls(tabbedPage, 'LeftAddon');
+    const rightAddon = cls(tabbedPage, 'RightAddon');
+    const tabContents = cls(tabbedPage, 'TabContents');
+    const tabContentsScroll = cls(tabbedPage, 'TabContentsScroll');
+    const scrolledDown = cls(tabbedPage, 'ScrolledDown');
+    const isUnderHeader = cls(tabbedPage, 'IsUnderHeader');
+
+    const tabSelectors = present([scoped(tab), scope ? `${scope} [role="tab"]` : null]);
+    const selectedTabSelectors = present([
+        tab && tabSelected ? scoped(`${tab}${tabSelected}`) : null,
+        scope ? `${scope} [role="tab"][aria-selected="true"]` : null,
+    ]);
+    const focusedTabSelectors = tabSelectors.flatMap((sel) => [
+        `${sel}.gpfocus`,
+        `${sel}:focus`,
+        `${sel}:hover`,
+    ]);
+    const selectedIdleTabSelectors = selectedTabSelectors.map(
+        (sel) => `${sel}:not(.gpfocus):not(:focus):not(:hover)`,
+    );
+
+    const surfaceCards = present([
+        scoped(cls(section, 'AppDetailsSectionContainer')),
+        scoped(cls(section, 'RightColumnSection')),
+        scoped(cls(event, 'Event')),
+        scoped(cls(event, 'PartnerEventMediumImage_Container')),
+        scoped(cls(deckVerified, 'DeckVerifiedInfo')),
+        scoped(cls(summaryCarousel, 'SummaryCarouselContainer')),
+        scoped(cls(friendsSection, 'PlayingNowBody')),
+        scoped(cls(community, 'CommunityItem')),
+        scoped(cls(achievements, 'AchievementListItemBase')),
+        scoped(cls(achievements, 'AchievementCarouselItem')),
+        scoped(gameInfoContainer),
+        scoped(cls(section, 'Anchor')),
+    ]);
+    const mantleHeaders = present([
+        scoped(cls(event, 'EventHeadline')),
+        scoped(cls(event, 'AppActivityDate')),
+        scoped(cls(deckVerified, 'Details')),
+        scoped(cls(section, 'Highlight')),
+    ]);
+    const textEntries = present([
+        scoped(cls(activity, 'PostTextEntryArea')),
+        scope ? `${scope} textarea` : null,
+        scope ? `${scope} input[type="text"]` : null,
+    ]);
+    const actionButtons = present([
+        scoped(cls(dialog, 'DialogButton')),
+        scoped(appDetailsBtn),
+        scope ? `${scope} button.DialogButton` : null,
+    ]);
+    const focusedButtons = actionButtons.flatMap((sel) => [`${sel}.gpfocus`, `${sel}:focus`, `${sel}:hover`]);
+    const progressTracks = present([
+        scoped(cls(achProgress, 'AchievementProgressContainer')),
+        scoped(cls(play, 'DetailsProgressContainer')),
+    ]);
+    const progressFills = present([
+        scoped(cls(achProgress, 'AchievementProgress')),
+        scoped(cls(play, 'DetailsProgressBar')),
+    ]);
+    const bumperSelectors = present([
+        scoped(leftAddon),
+        scoped(rightAddon),
+        scope ? `${scope} [class*="TabBumper"]` : null,
+    ]);
+
+    const tabHeaderSelectors = present([
+        scoped(tabHeaderWrapper),
+        tabHeaderWrapper && tabHeaderFloating ? scoped(`${tabHeaderWrapper}${tabHeaderFloating}`) : null,
+        isUnderHeader && tabHeaderWrapper ? scoped(`${isUnderHeader} ${tabHeaderWrapper}`) : null,
+        scrolledDown && tabHeaderWrapper ? scoped(`${scrolledDown}${tabHeaderWrapper}`) : null,
+    ]);
+
+    return [
+        // Transparent scroll/tab wrappers over --ctp-base canvas, keeping tab header above scrolled content in normal flow
+        rule(
+            present([
+                scoped(gtp),
+                gtp && isUnderHeader ? scoped(`${gtp}${isUnderHeader}`) : null,
+                gtp && scrolledDown ? scoped(`${gtp}${scrolledDown}`) : null,
+            ]),
+            ` display: flex !important; flex-direction: column !important; align-items: stretch !important; padding-top: 0 !important;
+              background: var(--ctp-base, #0e141b) !important; background-image: none !important; color: var(--ctp-text, #dcdedf) !important; `,
+        ),
+        rule(
+            present([
+                scoped(tabContents),
+                scoped(tabContentsScroll),
+                scoped(appContent),
+                scoped(sectionList),
+                scoped(tabRow),
+                scoped(tabRowTabs),
+                scoped(tabsScroll),
+            ]),
+            ` background: transparent !important; background-color: transparent !important; background-image: none !important; box-shadow: none !important; `,
+        ),
+        rule(
+            present([
+                scoped(tabContents),
+                scoped(tabContentsScroll),
+                scoped(appContent),
+                scoped(sectionList),
+            ]),
+            ` position: relative !important; top: auto !important; margin-top: 0 !important; padding-top: 0 !important; `,
+        ),
+        rule(present([scoped(tabContents)]), ` flex: 1 1 auto !important; min-height: 0 !important; `),
+        rule(present([scoped(tabRowSpacer)]), ` display: none !important; height: 0 !important; min-height: 0 !important; margin: 0 !important; padding: 0 !important; `),
+        rule(
+            present([
+                tabHeaderWrapper && `${scope} ${tabHeaderWrapper}::before`,
+                tabHeaderWrapper && `${scope} ${tabHeaderWrapper}::after`,
+                isUnderHeader && tabHeaderWrapper && `${scope} ${isUnderHeader} ${tabHeaderWrapper}::before`,
+                scrolledDown && tabHeaderWrapper && `${scope} ${scrolledDown}${tabHeaderWrapper}::before`,
+            ]),
+            ` background: transparent !important; background-image: none !important; box-shadow: none !important; backdrop-filter: none !important; `,
+        ),
+        rule(
+            tabHeaderSelectors,
+            ` position: relative !important; top: auto !important; left: auto !important; right: auto !important; bottom: auto !important;
+              height: auto !important; min-height: 0 !important; flex: 0 0 auto !important; z-index: 6 !important;
+              margin: 0 0 ${d(20)} 0 !important; padding: 0 0 ${d(12)} 0 !important;
+              background: var(--ctp-base, #0e141b) !important; background-color: var(--ctp-base, #0e141b) !important; background-image: none !important; box-shadow: none !important;
+              border-bottom: ${d(1)} solid var(--ctp-surface2, rgba(255, 255, 255, 0.1)) !important; `,
+        ),
+        rule(scoped(tabRowTabs), ` gap: ${d(minimal ? 14 : 8)} !important; align-items: center !important; `),
+
+        // L1 / R1 bumper glyphs toned to match Native Home surfaces
+        rule(bumperSelectors, ` border-radius: 0 !important; background: var(--ctp-surface0, rgba(20, 28, 38, 0.88)) !important;
+            border: ${d(1)} solid var(--ctp-surface2, rgba(255, 255, 255, 0.14)) !important; color: var(--ctp-text, #dcdedf) !important;
+            padding: ${d(2)} ${d(6)} !important; box-shadow: none !important; opacity: 0.88 !important; `),
+        rule(bumperSelectors.map((s) => `${s} svg`), ` filter: none !important; color: var(--ctp-text, #dcdedf) !important; `),
+
+        // Adaptive tab strip: Minimalist underline vs Full square block
+        rule(
+            tabSelectors,
+            minimal
+                ? ` border-radius: 0 !important; outline: none !important; box-shadow: none !important; background: transparent !important;
+                    color: var(--ctp-subtext0, #8b929a) !important; border: none !important; border-bottom: ${d(3)} solid transparent !important;
+                    padding: ${d(6)} ${d(4)} !important; font-weight: 600 !important; letter-spacing: 0.04em !important;
+                    transition: color 140ms ease, background 140ms ease, border-color 140ms ease !important; `
+                : ` border-radius: 0 !important; outline: none !important; box-shadow: none !important; background: transparent !important;
+                    color: var(--ctp-subtext0, #8b929a) !important; border: ${d(2)} solid transparent !important;
+                    padding: ${d(6)} ${d(14)} !important; font-weight: 600 !important; letter-spacing: 0.04em !important;
+                    transition: color 140ms ease, background 140ms ease, border-color 140ms ease !important; `,
+        ),
+        rule(tabSelectors.flatMap((s) => [`${s}::before`, `${s}::after`]), ` display: none !important; border-radius: 0 !important; box-shadow: none !important; `),
+        rule(
+            selectedIdleTabSelectors,
+            minimal
+                ? ` background: transparent !important; color: var(--ctp-text, #ffffff) !important; border-bottom-color: var(--ctp-accent-color, var(--glance-accent, #1a9fff)) !important; font-weight: 700 !important; `
+                : ` background: var(--ctp-surface0, rgba(20, 28, 38, 0.88)) !important; color: var(--ctp-text, #ffffff) !important; border-color: var(--ctp-surface2, rgba(255, 255, 255, 0.16)) !important; font-weight: 700 !important; `,
+        ),
+        rule(
+            focusedTabSelectors,
+            minimal
+                ? ` background: var(--ctp-accent-color, var(--glance-accent, #1a9fff)) !important; color: var(--ctp-crust, #0b0f14) !important;
+                    border-bottom-color: var(--ctp-accent-color, var(--glance-accent, #1a9fff)) !important; font-weight: 700 !important; box-shadow: none !important; `
+                : ` background: var(--ctp-accent-color, var(--glance-accent, #1a9fff)) !important; color: var(--ctp-crust, #0b0f14) !important;
+                    border-color: var(--ctp-accent-color, var(--glance-accent, #1a9fff)) !important; font-weight: 700 !important; box-shadow: none !important; `,
+        ),
+        rule(present([scoped(tabTitle), scoped(tabCount), scoped(tabCountBadge)]), ` color: inherit !important; `),
+        rule(focusedTabSelectors.flatMap((s) => [tabCount ? `${s} ${tabCount}` : null, tabTitle ? `${s} ${tabTitle}` : null].filter(Boolean) as string[]), ` color: var(--ctp-crust, #0b0f14) !important; `),
+
+        // Inner cards, event feeds, community cards, Game Info & achievements
+        rule(surfaceCards, ` background: var(--ctp-surface0, rgba(20, 28, 38, 0.88)) !important; background-image: none !important;
+            border: ${d(1)} solid var(--ctp-surface2, rgba(255, 255, 255, 0.12)) !important; border-radius: 0 !important;
+            color: var(--ctp-text, #dcdedf) !important; box-shadow: none !important; `),
+        rule(mantleHeaders, ` background: var(--ctp-mantle, #0b0f14) !important; color: var(--ctp-subtext0, #8b929a) !important; border-radius: 0 !important; `),
+        rule(scoped(cls(event, 'EventBody')), ` background: var(--ctp-surface0, rgba(20, 28, 38, 0.88)) !important; box-shadow: none !important; border-radius: 0 !important; `),
+        rule(textEntries, ` background: var(--ctp-mantle, #11161d) !important; color: var(--ctp-text, #dcdedf) !important;
+            border: ${d(1)} solid var(--ctp-surface2, rgba(255, 255, 255, 0.14)) !important; border-radius: 0 !important; `),
+        rule(progressTracks, ` background: var(--ctp-surface2, rgba(255, 255, 255, 0.14)) !important; border-radius: 0 !important; `),
+        rule(progressFills, ` background: var(--ctp-accent-color, var(--glance-accent, #1a9fff)) !important; border-radius: 0 !important; `),
+        rule(actionButtons, ` background: var(--ctp-surface1, rgba(32, 44, 60, 0.9)) !important; color: var(--ctp-text, #dcdedf) !important;
+            border: ${d(1)} solid var(--ctp-surface2, rgba(255, 255, 255, 0.14)) !important; border-radius: 0 !important; box-shadow: none !important; `),
+        rule(focusedButtons, ` background: var(--ctp-accent-color, var(--glance-accent, #1a9fff)) !important; color: var(--ctp-crust, #0b0f14) !important;
+            border-color: var(--ctp-accent-color, var(--glance-accent, #1a9fff)) !important; box-shadow: none !important; `),
+        scope ? `${scope} [role="progressbar"] { border-radius: 0 !important; }` : '',
+    ].filter(Boolean);
+}
+function restyleRules(classes: ThemeClasses, layout: boolean, minimal: boolean): string[] {
+    const { header, details, root, play, shared, feedback } = classes;
     const playW = minimal ? 216 : 264;
     const icon = minimal ? 46 : 52;
     const gap = minimal ? 10 : 12;
@@ -801,6 +1021,7 @@ function restyleRules({ header, details, root, play, shared, feedback }: ThemeCl
             rule(tabs, ` margin-top: calc(100vh - var(--gg-play-top) - var(--gg-row-h) - 38px) !important; padding: 38px var(--gg-side) ${d(48)} !important; min-height: 100vh !important; box-sizing: border-box !important; position: relative !important; z-index: 4 !important; background: var(--ctp-base, #0e141b) !important; color: var(--ctp-text, #dcdedf) !important; `),
         );
     }
+    rules.push(...lowerDetailsRules(classes, minimal));
     return rules;
 }
 

@@ -1,4 +1,4 @@
-import { Focusable, Navigation } from '@decky/ui';
+import { Focusable, Navigation, useQuickAccessVisible } from '@decky/ui';
 import type { GamepadEvent } from '@decky/ui';
 import { CSSProperties, memo, MouseEvent, RefObject, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { FaFilter, FaSortAmountDown } from 'react-icons/fa';
@@ -7,7 +7,8 @@ import { markOpen } from '../data/openIntent';
 import { useSettings } from '../data/settings';
 import { openGameActions } from '../home/ActionRow';
 import { HeroBackground } from '../home/HeroBackground';
-import { browserStores, capsuleUrls } from '../home/artwork';
+import { mountOpenSkeletonOverlay } from '../home/OpenSkeleton';
+import { browserStores, capsuleUrls, heroUrls } from '../home/artwork';
 import { focusElementSettled } from '../home/homeNav';
 import { sideInset } from '../home/insets';
 import { findLegendHeight, legendReserve } from '../home/legend';
@@ -38,6 +39,7 @@ import {
 } from './libraryData';
 import { markLibraryLeaving, noteLibraryMemory, readLibraryMemory, takeLibraryReturn } from './libraryMemory';
 import { libraryButtonAction, visibleRowRange } from './libraryNav';
+import { fetchTabMasterConfig, type TabMasterConfig } from './tabMaster';
 
 interface Size {
     width: number;
@@ -161,11 +163,24 @@ const LibraryCoverCard = memo(function LibraryCoverCard({
 
 export function CustomLibrary() {
     const currentSettings = useSettings();
-    const { minimalSide, hideStatusBarBackground, libraryGridColumns, libraryGridSize, heroPosition } = currentSettings;
+    const {
+        minimalSide,
+        hideStatusBarBackground,
+        libraryGridColumns,
+        libraryGridSize,
+        heroPosition,
+        libraryTabMaster,
+        libraryShowHiddenTab,
+        customLibraryTabs,
+    } = currentSettings;
     const knownLang = peekSteamLanguage();
     const loadedLang = useAsync(knownLang ? null : 'lang', getSteamLanguage);
     const systemLang = knownLang ?? loadedLang ?? 'english';
     const minimal = homeMode(currentSettings).minimalLibrary;
+    const qamVisible = useQuickAccessVisible();
+    const [tabMasterConfig, setTabMasterConfig] = useState<TabMasterConfig | null>(null);
+    const [tmTick, setTmTick] = useState(0);
+    const prevQamRef = useRef(qamVisible);
     const [memory] = useState(readLibraryMemory);
     const [tabId, setTabId] = useState<LibraryTabId>(memory.tabId);
     const [sort, setSort] = useState<LibrarySort>(memory.sort);
@@ -173,15 +188,46 @@ export function CustomLibrary() {
     const [selectedAppId, setSelectedAppId] = useState<number>(memory.appId);
     const [scrollRowTop, setScrollRowTop] = useState(0);
 
-    const snapshot = useMemo(() => readLibrarySnapshot(undefined), [systemLang]);
+    useEffect(() => {
+        if (!libraryTabMaster) {
+            setTabMasterConfig(null);
+            return undefined;
+        }
+        let alive = true;
+        void fetchTabMasterConfig().then((cfg) => {
+            if (alive) setTabMasterConfig(cfg);
+        });
+        return () => { alive = false; };
+    }, [libraryTabMaster, tmTick]);
+
+    useEffect(() => {
+        if (prevQamRef.current && !qamVisible) {
+            setTmTick((n) => n + 1);
+        }
+        prevQamRef.current = qamVisible;
+    }, [qamVisible]);
+
+    const snapshot = useMemo(
+        () =>
+            readLibrarySnapshot(undefined, undefined, {
+                tabMasterConfig,
+                useTabMaster: libraryTabMaster,
+                showHiddenTab: libraryShowHiddenTab,
+                customTabs: customLibraryTabs,
+            }),
+        [systemLang, tabMasterConfig, libraryTabMaster, libraryShowHiddenTab, customLibraryTabs],
+    );
     const activeTab = useMemo(
         () => snapshot.tabs.find((t) => t.id === tabId) ?? snapshot.tabs[0],
         [snapshot.tabs, tabId],
     );
-    const games = useMemo(
-        () => filterAndSortLibraryGames(snapshot.games, activeTab, installedOnly, sort),
-        [snapshot.games, activeTab, installedOnly, sort],
-    );
+    const effectiveSort = activeTab?.defaultSort ?? sort;
+    const games = useMemo(() => {
+        const pool = activeTab?.includeHidden || activeTab?.id.startsWith('tm:') || activeTab?.id.startsWith('custom:')
+            ? snapshot.allGames
+            : snapshot.games;
+        return filterAndSortLibraryGames(pool, activeTab, installedOnly, effectiveSort);
+    }, [snapshot.games, snapshot.allGames, activeTab, installedOnly, effectiveSort]);
 
     const selectedIndex = useMemo(() => {
         if (games.length === 0) return 0;
@@ -309,6 +355,11 @@ export function CustomLibrary() {
         const mode = homeMode(currentSettings);
         const look = mode.gamePage && mode.restyleDetails ? (mode.cleanDetails ? 'clean' : 'spotlight') : 'steam';
         markOpen(appId, { look, mode: 'all' });
+        if (look !== 'steam' && rootRef.current) {
+            const gameObj = games.find((g) => g.appId === appId) ?? selectedGame;
+            const hero = heroUrls(appId, browserStores)[0] ?? null;
+            mountOpenSkeletonOverlay(rootRef.current, appId, look, gameObj?.name ?? '', hero, steamEnterOffCss());
+        }
         openTimerRef.current = setTimeout(() => {
             openTimerRef.current = null;
             try {
@@ -382,10 +433,10 @@ export function CustomLibrary() {
     const installedLabel = tr('installed');
     const allLabel = tr('all');
     const emptyLabel = tr('noMatches');
-    const sortText = librarySortLabel(sort);
+    const sortText = librarySortLabel(effectiveSort);
     const ru = isRussianSystem();
     const footerFilterLabel = installedOnly ? allLabel : (ru ? 'Устан.' : 'Installed');
-    const footerSortLabel = librarySortShortLabel(sort);
+    const footerSortLabel = librarySortShortLabel(effectiveSort);
     const footerMenuLabel = ru ? 'Меню' : 'Menu';
     const footerOpenLabel = ru ? 'Открыть' : 'Open';
     const metaParts: string[] = [];
@@ -394,7 +445,7 @@ export function CustomLibrary() {
         if (selectedGame.lastPlayed > 0) metaParts.push(formatLastPlayed(selectedGame.lastPlayed, nowSec, locale));
         metaParts.push(selectedGame.installed ? tr('installedStatus') : tr('notInstalled'));
     }
-    const stageKey = `${activeTab?.id ?? 'all'}:${installedOnly ? 1 : 0}:${sort}`;
+    const stageKey = `${activeTab?.id ?? 'all'}:${installedOnly ? 1 : 0}:${effectiveSort}`;
 
     return (
         <div

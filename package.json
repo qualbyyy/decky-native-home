@@ -1,6 +1,6 @@
 {
   "name": "decky-native-home",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "description": "Native Steam Deck Home with game logos, quick actions, seamless game page transition, and CSS Loader theme adaptation",
   "type": "module",
   "scripts": {

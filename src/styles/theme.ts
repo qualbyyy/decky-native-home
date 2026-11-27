@@ -1,4 +1,13 @@
-import { appDetailsClasses, appDetailsHeaderClasses, basicAppDetailsSectionStylerClasses, findClassModule, playSectionClasses } from '@decky/ui';
+import {
+    achievementListClasses,
+    appDetailsClasses,
+    appDetailsHeaderClasses,
+    basicAppDetailsSectionStylerClasses,
+    findClassModule,
+    gamepadDialogClasses,
+    gamepadTabbedPageClasses,
+    playSectionClasses,
+} from '@decky/ui';
 import { LOG_PREFIX } from '../constants';
 import { arrivalSelectors, buildAccentCss, steamFooterSelector, buildArrivingCss, buildSteamEnterOffCss, buildCleanCss, buildDownloadCss, buildLaunchCss, buildRingCss, buildThemeCss, buildUnifideckCss, ClassMap, launchTargets, playRowSelector, ringBoost, ThemeClasses, ThemeOptions, twinTargets } from './themeCss';
 import { viewportSize } from '../home/openHome';
@@ -45,6 +54,23 @@ function themeClasses(): ThemeClasses {
     classes.shared ??= safeFind((m) => Boolean(m.SharedLibrary && m.Row)) ?? safeFind((m) => Boolean(m.SharedLibrary)) ?? classes.play;
     classes.transition ??= safeFind((m) => Boolean(m.TopLevelTransition && m.Enter && m.EnterActive));
     classes.footer ??= safeFind((m) => Boolean(m.BasicFooter && m.FooterLegend));
+    classes.tabbedPage ??=
+        validMap(gamepadTabbedPageClasses, 'GamepadTabbedPage') ??
+        safeFind((m) => Boolean(m.GamepadTabbedPage && m.TabRow));
+    classes.section ??= safeFind((m) => Boolean(m.AppDetailsSection && m.AppDetailsSectionContainer));
+    classes.activity ??= safeFind((m) => Boolean(m.ActivityFeedContainer && m.InnerContainer));
+    classes.event ??= safeFind((m) => Boolean(m.Event && m.EventHeadline && m.EventBody));
+    classes.deckVerified ??= safeFind((m) => Boolean(m.DeckVerifiedInfo && m.Details));
+    classes.achievements ??=
+        validMap(achievementListClasses, 'AchievementListItemBase') ??
+        safeFind((m) => Boolean(m.AchievementListItemBase));
+    classes.achProgress ??= safeFind((m) => Boolean(m.AchievementProgressContainer && m.AchievementProgress));
+    classes.summaryCarousel ??= safeFind((m) => Boolean(m.SummaryCarouselContainer));
+    classes.friendsSection ??= safeFind((m) => Boolean(m.FriendsSectionPlayingNow || m.PlayingNowBody));
+    classes.community ??= safeFind((m) => Boolean(m.CommunityItem));
+    classes.dialog ??=
+        validMap(gamepadDialogClasses, 'DialogButton') ??
+        safeFind((m) => Boolean(m.DialogButton && m.GamepadDialogContent));
     return classes as ThemeClasses;
 }
 

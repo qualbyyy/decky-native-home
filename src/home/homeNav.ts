@@ -9,6 +9,7 @@ import { applyOpening, canvasMeasure, lineMeasure, OpenVariant, openVariant, pag
 import { openMotion } from './openMotion';
 import { pageTargets, PageLook } from './openTargets';
 import { mountOpenBridge } from './openBridge';
+import { skeletonBridgeForTransition } from './OpenSkeleton';
 import { heroArtFor, heroShownApp } from './HeroBackground';
 import { homeMode } from './mode';
 import { settings } from '../data/settings';
@@ -162,7 +163,7 @@ function urls(read: () => string[]): string[] {
 
 /** The open being started (set by openGame); the controller's hooks take a copy when Home starts moving. */
 /** `extras`: the page's parts Home draws as it turns into the page (openHome.extrasParts words; '' for none). */
-interface OpenContext { root: HTMLElement | null; appId: number; variant: OpenVariant; look: PageLook; intent: OpenIntent; heroUrl: string | null; extras: string }
+interface OpenContext { root: HTMLElement | null; appId: number; variant: OpenVariant; look: PageLook; intent: OpenIntent; heroUrl: string | null; extras: string; title: string }
 let next: OpenContext | null = null;
 let active: OpenContext | null = null;
 /** One controller for the session: it must outlive Home, which Steam unmounts once the game page opens. */
@@ -182,7 +183,8 @@ function startHome(c: OpenContext): (() => void) | null {
             if (home && scale > 0 && screen.width > 0 && screen.height > 0) {
                 const stats = pageStatsFromChips(readChipTexts(root), c.look, null);
                 const store = home.store ?? { x: 0, y: 0, w: 0, h: 0 };
-                const page = pageTargets(c.look, screen, stats, canvasMeasure(root), { w: store.w, h: store.h }, undefined, lineMeasure(root));
+                const hasEyebrow = Boolean(root.querySelector('.gh-eyebrow')?.textContent?.trim());
+                const page = pageTargets(c.look, screen, stats, canvasMeasure(root), { w: store.w, h: store.h }, undefined, lineMeasure(root), hasEyebrow);
                 const focused = !root.ownerDocument?.documentElement?.hasAttribute(MOUSE_ATTR);
                 return applyOpening(root, 'morph', openMotion(home, page, c.look, scale, focused), null, '', []);
             }
@@ -224,6 +226,9 @@ function controller(): OpenTransition {
             const c = active;
             if (!c?.root) return null;
             const doc = c.root.ownerDocument;
+            if (c.intent.look !== 'steam' && !c.root.querySelector('.gh-title-block')) {
+                return skeletonBridgeForTransition(c.root, c.appId, c.look, c.title, c.heroUrl, steamEnterOffCss());
+            }
             // Our status bar lives outside Home's root; its copy also keeps Steam's top bar hidden until the page's own takes over.
             // Steam's footer is one element over every page: the copy would cover it, so it carries a copy of it too.
             const footer = steamFooter();
@@ -274,8 +279,9 @@ export function openGame(appId: number, source?: HTMLElement | null) {
         const homeCloud = variant === 'morph' && root ? root.querySelector('.gh-actions .gh-btn[data-action="cloud"]') !== null : undefined;
         const extras = '';
         const homeFamily = variant === 'morph' && root ? root.querySelector('.gh-family') !== null : undefined;
+        const title = source?.getAttribute('data-name') || root?.querySelector('.nh-min-item-sel .nh-min-item-name, .gh-title-slot .gh-title')?.textContent?.trim() || '';
         const intent: OpenIntent = { look: pageRestyled ? look : 'steam', mode: variant === 'morph' ? 'parts' : 'all', eyebrow, newGame, homeCloud, homeFamily };
-        next = { root, appId, variant, look, heroUrl, intent, extras };
+        next = { root, appId, variant, look, heroUrl, intent, extras, title };
         controller().open(appId, variant);
     } catch (error) {
         // Not reached in practice (the controller never throws); the page must open regardless.

@@ -79,6 +79,7 @@ const VALUE_LINE = PAGE_LINES.value;
 export function pageTargets(
     look: PageLook, screen: { width: number; height: number; dpr?: number }, _stats: PageStat[], _measure: Measure, storeSize: { w: number; h: number }, _asked?: ExtrasAsked,
     _lines?: LineMeasure,
+    hasEyebrow = true,
 ): PageTargets {
     const L = PAGE_LAYOUT;
     const W = screen.width;
@@ -97,13 +98,18 @@ export function pageTargets(
     const circles = [0, 1, 2, 3].map((i) => ({ x: side + (playW + gap + i * (icon + gap)) * d, y: playTop, w: icon * d, h: icon * d }));
 
     const blockBottom = playTop - titleGap * d;
-    const metaH = (isMin ? 18 : L.titleBlock.eyebrow * VALUE_LINE) * d;
-    const titleInnerGap = (isMin ? 10 : 12) * d;
+    const metaH = hasEyebrow ? (isMin ? 18 : L.titleBlock.eyebrow * VALUE_LINE) * d : 0;
+    const titleInnerGap = hasEyebrow ? (isMin ? 10 : 12) * d : 0;
     const eyebrowBottomLeft = { x: side, y: blockBottom };
     const titleBottomLeft = { x: side, y: blockBottom - metaH - titleInnerGap };
 
     const store: Box = { x: W - side - storeSize.w, y: playTop - storeSize.h, w: storeSize.w, h: storeSize.h };
-    return { titleBottomLeft, eyebrowBottomLeft, play, circles, store, shells: [], cards: [], d, stats: {} };
+    const rowH = (isMin ? 62 : 72) * d;
+    const dockH = Math.max(0, H - STEAM_LEGEND_PX - (playTop + rowH) - 16 * d);
+    const shells: Box[] = !isMin && dockH > 40 * d
+        ? [{ x: side, y: playTop + rowH, w: W - 2 * side, h: dockH }]
+        : [];
+    return { titleBottomLeft, eyebrowBottomLeft, play, circles, store, shells, cards: shells, d, stats: {} };
 }
 
 /** The page card (`cards`: PageTargets.shells) that point `p` is in, edges included, or null. Pure. */
